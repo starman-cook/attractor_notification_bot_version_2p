@@ -50,7 +50,7 @@ var moment_1 = __importDefault(require("moment"));
 /**
  *   DONE********** Добавить возможность смены номера занятния и экзамена без удаления текущих данных, так, для быстрой коррекции на всякий случай
  *
- *
+ *   DONE********** Добавить сообщение о крайней дате оплаты, в пятницу на неделе после контрольной, чтобы напомнить тем, кто еще не оплатил
  *
 
  2.1 DONE********** Каникул (Убрать время у ввести даты) *****
@@ -60,18 +60,18 @@ var moment_1 = __importDefault(require("moment"));
 
  2.6
 
- Потестить добавление и удаление пользователей, чтобы бот не падал ****
+     DONE********** Потестить добавление и удаление пользователей, чтобы бот не падал ****
 
  2.8 DONE********** добавить к уведомлениям номер вебинара *****
 
- 5. Пофиксить проблему разлета времени для зоны +6 ****** (Это когда на сервер его выгрузим)
+ 5.  DONE********** Пофиксить проблему разлета времени для зоны +6 ****** (Это когда на сервер его выгрузим)
 
 
  8. Создать функционал логирования ошибок работы бота
  9. Реализовать функционал отправки логов ошибок по расписанию *****
 
 
-Добавить команду выгрузки данных всех групп, со всеми их данными, когда учатся, какое занятие идет у них, какая контрольная и когда следующая
+    DONE********** Добавить команду выгрузки данных всех групп, со всеми их данными, когда учатся, какое занятие идет у них, какая контрольная и когда следующая
  */
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -113,7 +113,6 @@ var bot = new node_telegram_bot_api_1.default(config_1.config.telegramToken, {
  * Здесь мы получаем сегодняшнюю дату в нужном формате, плюс создаем переменные для остлеживания даты субботы и пятницы (для контрольной и дедлайна оплаты)
  * Затем проверяем каждый день недели для отправки необходимых сообщений подходящим по параметрам группам
  */
-var date = moment_1.default().format("DD-MM-YYYY");
 var dateOfNextSaturday;
 var dateOnFriday;
 /**
@@ -264,7 +263,7 @@ node_schedule_1.default.scheduleJob("1 30 10 * * 6", function () { return __awai
  * если вызвать функцию вновь, то предыдущая модель группы с данными будет удалена и на ее место встанет новая
  */
 bot.onText(/\/build_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
-    var admins, admin, i, ii, oldLesson, lesson, err_1, funnyResponse;
+    var admins, admin, i, ii, oldLesson, lesson, send_1, err_1, funnyResponse;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatAdministrators(msg.chat.id)];
@@ -306,8 +305,9 @@ bot.onText(/\/build_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0
                 lesson.save();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")];
             case 5:
-                _a.sent();
+                send_1 = _a.sent();
                 setTimeout(function () {
+                    bot.deleteMessage(msg.chat.id, send_1.message_id.toString());
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
                 }, 20000);
                 return [3 /*break*/, 8];
@@ -319,7 +319,7 @@ bot.onText(/\/build_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0
                 return [3 /*break*/, 8];
             case 8: return [3 /*break*/, 11];
             case 9:
-                funnyResponse = "\n        <b>\u041A\u0430\u0442\u0430\u043D\u044B \u0437\u0432\u0443\u043A\u0438</b>\n        <b>\u0441\u0430\u043C\u0443\u0440\u0430\u0439 \u043F\u0440\u043E\u043C\u0430\u0445\u043D\u0443\u043B\u0441\u044F</b>\n        <b>\u0441\u044D\u043F\u043F\u0443\u043A\u0443 \u0432\u044B\u0445\u043E\u0434</b>\n        ";
+                funnyResponse = "\n<b>\u041A\u0430\u0442\u0430\u043D\u044B \u0437\u0432\u0443\u043A\u0438</b>\n<b>\u0441\u0430\u043C\u0443\u0440\u0430\u0439 \u043F\u0440\u043E\u043C\u0430\u0445\u043D\u0443\u043B\u0441\u044F</b>\n<b>\u0441\u044D\u043F\u043F\u0443\u043A\u0443 \u0432\u044B\u0445\u043E\u0434</b>\n        ";
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
@@ -383,7 +383,7 @@ bot.onText(/\/setup_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0
                 return [3 /*break*/, 12];
             case 12: return [3 /*break*/, 15];
             case 13:
-                funnyResponse = "\n        <b>\u041F\u0440\u0430\u0432\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435</b>\n        <b>\u0441\u0451\u0433\u0443\u043D\u0430\u0442\u0443 \u0434\u0430\u043D\u043E \u043B\u0438\u0448\u044C</b>\n        <b>\u0441\u0442\u0443\u043F\u0430\u0439 \u0447\u0435\u043B\u043E\u0432\u0435\u043A</b>\n        ";
+                funnyResponse = "\n<b>\u041F\u0440\u0430\u0432\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435</b>\n<b>\u0441\u0451\u0433\u0443\u043D\u0430\u0442\u0443 \u0434\u0430\u043D\u043E \u043B\u0438\u0448\u044C</b>\n<b>\u0441\u0442\u0443\u043F\u0430\u0439 \u0447\u0435\u043B\u043E\u0432\u0435\u043A</b>\n        ";
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
@@ -429,7 +429,7 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg, arr) { return __await
                 return [3 /*break*/, 6];
             case 6: return [3 /*break*/, 9];
             case 7:
-                funnyResponse = "\n        <b>\u0423\u0437\u0440\u0435\u0442\u044C \u0436\u0435\u043B\u0430\u0435\u0448\u044C</b>\n        <b>\u0438\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044E \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B</b>\n        <b>\u043F\u0443\u0441\u0442\u043E\u0442\u0430 \u043A\u0440\u0443\u0433\u043E\u043C</b>\n        ";
+                funnyResponse = "\n<b>\u0423\u0437\u0440\u0435\u0442\u044C \u0436\u0435\u043B\u0430\u0435\u0448\u044C</b>\n<b>\u0438\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044E \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B</b>\n<b>\u043F\u0443\u0441\u0442\u043E\u0442\u0430 \u043A\u0440\u0443\u0433\u043E\u043C</b>\n        ";
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
@@ -444,8 +444,8 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg, arr) { return __await
  * Данная функция доступна всем (возможно добавим ее через BotFather в видимые команды), сообщение показывает данные по группе, текущему занятию, датой следующей контрольной
  * Сообщение автоматически удаляется спустя некоторое время
  */
-bot.onText(/\/show/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
-    var lesson, dif_1, arrWithRestDays, result_1, text, send_1, err_4;
+bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
+    var lesson, dif_1, arrWithRestDays, result_1, text, send_2, err_4;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -465,15 +465,15 @@ bot.onText(/\/show/, function (msg, arr) { return __awaiter(void 0, void 0, void
                 if (lesson.lessonDayOne === "2")
                     result_1 -= 1;
                 dateOfNextSaturday = moment_1.default(lesson.dateOfLastLesson).add(result_1, "days").format("DD-MM-YYYY");
-                text = "\n\n<strong>--------------------------------------</strong>\n\n\n<strong>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</strong>\n        \n        \n<b>\u0412\u0430\u0448\u0430 \u0433\u0440\u0443\u043F\u043F\u0430 </b><pre>" + lesson.groupName + "</pre>\n\n<b>\u0412\u044B \u0443\u0447\u0438\u0442\u0435\u0441\u044C \u043F\u043E </b><pre>" + (lesson.lessonDayOne === "1" ? "понедельникам" : lesson.lessonDayOne === "2" ? "вторникам" : "хрен знает каким дням") + " \u0438 " + (lesson.lessonDayTwo === "4" ? "четвергам" : lesson.lessonDayTwo === "5" ? "пятницам" : "хрен знает каким дням") + "</pre>\n\n<b>\u041F\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 c </b><pre>" + (lesson.time === "evening" ? "19:30 до 21:30" : lesson.time === "lunch" ? "16:00 до 18:00" : "хрен знает сколькт до не знаю скольки") + "</pre>\n\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b><pre>" + (lesson.webinarOne === "3" ? "средам в 19:30" : lesson.webinarOne === "5" ? "пятницам в 19:30" : lesson.webinarOne === "2" ? "вторникам в 19:30" : "") + "  " + (lesson.webinarTwo === "5" ? "и по пятницам в 19:30" : "") + "</pre>\n\n<b>\u043D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F </b><pre>#" + lesson.lessonNumber + "</pre>\n\n<b>\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F </b><pre>#" + lesson.examNumber + " \u0431\u0443\u0434\u0435\u0442 \u0432 \u0441\u0443\u0431\u0431\u043E\u0442\u0443 " + dateOfNextSaturday + "</pre>     \n\n<b>\u041F\u0435\u0440\u0432\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson.holidayOne + "</pre> \n     \n<b>\u0412\u0442\u043E\u0440\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson.holidayTwo + "</pre> \n     \n<strong>--------------------------------------</strong>\n \n";
+                text = "\n\n<strong>--------------------------------------</strong>\n\n\n<strong>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</strong>\n        \n        \n<b>\u0412\u0430\u0448\u0430 \u0433\u0440\u0443\u043F\u043F\u0430 </b><pre>" + lesson.groupName + "</pre>\n\n<b>\u0412\u044B \u0443\u0447\u0438\u0442\u0435\u0441\u044C \u043F\u043E </b><pre>" + (lesson.lessonDayOne === "1" ? "понедельникам" : lesson.lessonDayOne === "2" ? "вторникам" : "хрен знает каким дням") + " \u0438 " + (lesson.lessonDayTwo === "4" ? "четвергам" : lesson.lessonDayTwo === "5" ? "пятницам" : "хрен знает каким дням") + "</pre>\n\n<b>\u041F\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 c </b><pre>" + (lesson.time === "evening" ? "19:30 до 21:30" : lesson.time === "lunch" ? "16:00 до 18:00" : "хрен знает сколько до не знаю скольки") + "</pre>\n\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b><pre>" + (lesson.webinarOne === "3" ? "средам в 19:30" : lesson.webinarOne === "5" ? "пятницам в 19:30" : lesson.webinarOne === "2" ? "вторникам в 19:30" : "") + "  " + (lesson.webinarTwo === "5" ? "и по пятницам в 19:30" : "") + "</pre>\n\n<b>\u041D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F </b><pre>#" + lesson.lessonNumber + "</pre>\n\n<b>\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F </b><pre>#" + lesson.examNumber + " \u0431\u0443\u0434\u0435\u0442 \u0432 \u0441\u0443\u0431\u0431\u043E\u0442\u0443 " + dateOfNextSaturday + "</pre>     \n\n<b>\u041F\u0435\u0440\u0432\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson.holidayOne + "</pre> \n     \n<b>\u0412\u0442\u043E\u0440\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson.holidayTwo + "</pre> \n     \n<strong>--------------------------------------</strong>\n \n";
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, text, {
                         parse_mode: "HTML"
                     })];
             case 2:
-                send_1 = _a.sent();
+                send_2 = _a.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-                    bot.deleteMessage(msg.chat.id, send_1.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, send_2.message_id.toString());
                 }, 30000); // 30 секунд до удаления сообщения
                 return [3 /*break*/, 5];
             case 3:
@@ -483,6 +483,81 @@ bot.onText(/\/show/, function (msg, arr) { return __awaiter(void 0, void 0, void
                 _a.sent();
                 return [3 /*break*/, 5];
             case 5: return [2 /*return*/];
+        }
+    });
+}); });
+/**
+ * Функции для выгрузки данных по всем группам
+ * Доступно только при личной переписке с ботом, команда доступна всем
+ * Подсказки данной команды нет, нужно вводить самому без ошибок, иначе не сработает
+ */
+bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
+    var arrWithRestDays, lesson, _loop_1, i, err_5;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                arrWithRestDays = [{ key: 1, value: 26 }, { key: 2, value: 23 }, { key: 3, value: 19 }, { key: 4, value: 16 }, { key: 5, value: 12 }, { key: 6, value: 9 }, { key: 7, value: 5 }, { key: 0, value: 2 }];
+                _a.label = 1;
+            case 1:
+                _a.trys.push([1, 7, , 9]);
+                return [4 /*yield*/, lesson_model_1.Lesson.find()];
+            case 2:
+                lesson = _a.sent();
+                console.log(lesson);
+                _loop_1 = function (i) {
+                    var totalAmountOfUsers, admins, amountWithoutAdmins, dif, result, text;
+                    return __generator(this, function (_b) {
+                        switch (_b.label) {
+                            case 0: return [4 /*yield*/, bot.getChatMembersCount(lesson[i].chatId)];
+                            case 1:
+                                totalAmountOfUsers = _b.sent();
+                                return [4 /*yield*/, bot.getChatAdministrators(lesson[i].chatId)];
+                            case 2:
+                                admins = _b.sent();
+                                amountWithoutAdmins = totalAmountOfUsers - admins.length;
+                                dif = lesson[i].lessonNumber % 8;
+                                result = 0;
+                                arrWithRestDays.map(function (el) {
+                                    if (el.key === dif) {
+                                        result = el.value;
+                                        return null;
+                                    }
+                                });
+                                if (lesson[i].lessonDayOne === "2")
+                                    result -= 1;
+                                dateOfNextSaturday = moment_1.default(lesson[i].dateOfLastLesson).add(result, "days").format("DD-MM-YYYY");
+                                text = "\n\n<strong>--------------------------------------</strong>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435 </b><pre>" + lesson[i].groupName + "</pre>\n\n<b>\u041B\u044E\u0434\u0435\u0439 \u0432 \u0447\u0430\u0442\u0435 \u0433\u0440\u0443\u043F\u043F\u044B </b><pre>" + totalAmountOfUsers + "</pre>\n\n<b>\u041B\u044E\u0434\u0435\u0439 \u0432 \u0447\u0430\u0442\u0435 \u0431\u0435\u0437 \u0430\u0434\u043C\u0438\u043D\u043E\u0432 </b><pre>" + amountWithoutAdmins + "</pre>\n\n<b>\u0423\u0447\u0435\u0431\u043D\u044B\u0435 \u0434\u043D\u0438 \u043F\u043E </b><pre>" + (lesson[i].lessonDayOne === "1" ? "понедельникам" : lesson[i].lessonDayOne === "2" ? "вторникам" : "хрен знает каким дням") + " \u0438 " + (lesson[i].lessonDayTwo === "4" ? "четвергам" : lesson[i].lessonDayTwo === "5" ? "пятницам" : "хрен знает каким дням") + "</pre>\n\n<b>\u041F\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 c </b><pre>" + (lesson[i].time === "evening" ? "19:30 до 21:30" : lesson[i].time === "lunch" ? "16:00 до 18:00" : "хрен знает сколько до не знаю скольки") + "</pre>\n\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b><pre>" + (lesson[i].webinarOne === "3" ? "средам в 19:30" : lesson[i].webinarOne === "5" ? "пятницам в 19:30" : lesson[i].webinarOne === "2" ? "вторникам в 19:30" : "") + "  " + (lesson[i].webinarTwo === "5" ? "и по пятницам в 19:30" : "") + "</pre>\n\n<b>\u041D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F </b><pre>#" + lesson[i].lessonNumber + "</pre>\n\n<b>\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F </b><pre>#" + lesson[i].examNumber + " \u0431\u0443\u0434\u0435\u0442 \u0432 \u0441\u0443\u0431\u0431\u043E\u0442\u0443 " + dateOfNextSaturday + "</pre>\n\n<b>\u041F\u0435\u0440\u0432\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson[i].holidayOne + "</pre>\n\n<b>\u0412\u0442\u043E\u0440\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson[i].holidayTwo + "</pre>\n\n<strong>--------------------------------------</strong>\n\n";
+                                return [4 /*yield*/, bot.sendMessage(msg.chat.id, (i + 1).toString())];
+                            case 3:
+                                _b.sent();
+                                return [4 /*yield*/, bot.sendMessage(msg.chat.id, text, {
+                                        parse_mode: "HTML"
+                                    })];
+                            case 4:
+                                _b.sent();
+                                return [2 /*return*/];
+                        }
+                    });
+                };
+                i = 0;
+                _a.label = 3;
+            case 3:
+                if (!(i < lesson.length)) return [3 /*break*/, 6];
+                return [5 /*yield**/, _loop_1(i)];
+            case 4:
+                _a.sent();
+                _a.label = 5;
+            case 5:
+                i++;
+                return [3 /*break*/, 3];
+            case 6: return [3 /*break*/, 9];
+            case 7:
+                err_5 = _a.sent();
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")];
+            case 8:
+                _a.sent();
+                return [3 /*break*/, 9];
+            case 9: return [2 /*return*/];
         }
     });
 }); });
@@ -513,10 +588,11 @@ function buildTheMessage(chatId, typeOfLesson, lessonOrExamNumber, time, date, a
  */
 function buildTheMessageWithConditions(lesson, day) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday;
+        var date, i, holiday;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
+                    date = moment_1.default().format("DD-MM-YYYY");
                     i = 0;
                     _a.label = 1;
                 case 1:
@@ -555,10 +631,11 @@ function buildTheMessageWithConditions(lesson, day) {
  */
 function buildWebinarMessage(lesson, day) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, fakeNumber;
+        var date, i, holiday, fakeNumber;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
+                    date = moment_1.default().format("DD-MM-YYYY");
                     i = 0;
                     _a.label = 1;
                 case 1:
@@ -583,16 +660,16 @@ function buildWebinarMessage(lesson, day) {
         });
     });
 }
-//9 1
 /**
  * Функция для сообщения о контролльной в день контрольной
  */
 function buildExamMessage(lesson) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday;
+        var date, i, holiday;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
+                    date = moment_1.default().format("DD-MM-YYYY");
                     i = 0;
                     _a.label = 1;
                 case 1:
@@ -650,30 +727,40 @@ function buildExamMessageBeforeActualDate(lesson, date) {
 }
 /**
  * Функция для напоминания об оплате, отрабатывает после первого первого занятия после контрольной
+ * И для сообщения о дедлайне оплвты, отрабатывает в пятницу следующей недели после контрольной, не отрабатывает во время каникул
  */
 function buildPaymentNotificationMessage(lesson, date) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
+        var months, todayDate, i, holiday, text, text;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
+                    months = ["noFirstMonth", "второй", "третий", "четвертый", "пятый", "шестой", "седьмой", "восьмой", "девятый", "десятый", "одиннадцатый", "двенадцатый", "тринадцатый", "четырнадцатый", "пятнадцатый"];
+                    todayDate = moment_1.default().format("DD-MM-YYYY");
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
+                    if (!(i < lesson.length)) return [3 /*break*/, 6];
                     holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
                     if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber % 8 === 1)) return [3 /*break*/, 3];
-                    text = "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, \u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 \u0442\u0435\u043A\u0443\u0449\u0438\u0439 \u043C\u0435\u0441\u044F\u0446, \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u043E \u043F\u044F\u0442\u043D\u0438\u0446\u044B (" + date + ")";
+                        return [3 /*break*/, 5];
+                    if (!(todayDate === date && (lesson[i].lessonNumber % 8 === 2 || lesson[i].lessonNumber % 8 === 3) && lesson[i].lessonNumber > 8)) return [3 /*break*/, 3];
+                    text = "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 " + months[lesson[i].examNumber - 1] + " \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043C\u0435\u0441\u044F\u0446. \u0421\u0435\u0433\u043E\u0434\u043D\u044F - " + date + ", \u043A\u0440\u0430\u0439\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u0432\u043D\u0435\u0441\u0435\u043D\u0438\u044F  \u043E\u043F\u043B\u0430\u0442\u044B.";
                     return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text)];
                 case 2:
                     _a.sent();
-                    _a.label = 3;
+                    return [3 /*break*/, 5];
                 case 3:
+                    if (!(lesson[i].lessonNumber % 8 === 1 && lesson[i].lessonNumber > 8)) return [3 /*break*/, 5];
+                    text = "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, \u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 \u0442\u0435\u043A\u0443\u0449\u0438\u0439 \u043C\u0435\u0441\u044F\u0446, \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u043E \u043F\u044F\u0442\u043D\u0438\u0446\u044B (" + date + ")";
+                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text)];
+                case 4:
+                    _a.sent();
+                    _a.label = 5;
+                case 5:
                     i++;
                     return [3 /*break*/, 1];
-                case 4: return [2 /*return*/];
+                case 6: return [2 /*return*/];
             }
         });
     });
