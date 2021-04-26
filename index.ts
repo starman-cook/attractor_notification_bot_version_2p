@@ -9,30 +9,9 @@ import moment from 'moment'
 import {LessonInterface} from './app/interfaces/lesson_interface'
 
 /**
- *   DONE********** Добавить возможность смены номера занятния и экзамена без удаления текущих данных, так, для быстрой коррекции на всякий случай
- *
- *   DONE********** Добавить сообщение о крайней дате оплаты, в пятницу на неделе после контрольной, чтобы напомнить тем, кто еще не оплатил
- *
-
- 2.1 DONE********** Каникул (Убрать время у ввести даты) *****
- 2.2
-
- 2.5 DONE********** Исключить уведомления о вебинарах следующих после контрольной работы *****
-
- 2.6
-
-     DONE********** Потестить добавление и удаление пользователей, чтобы бот не падал ****
-
- 2.8 DONE********** добавить к уведомлениям номер вебинара *****
-
- 5.  DONE********** Пофиксить проблему разлета времени для зоны +6 ****** (Это когда на сервер его выгрузим)
-
-
  8. Создать функционал логирования ошибок работы бота
  9. Реализовать функционал отправки логов ошибок по расписанию *****
-
-
-    DONE********** Добавить команду выгрузки данных всех групп, со всеми их данными, когда учатся, какое занятие идет у них, какая контрольная и когда следующая
+ 10. Добавить СетАп для установки даты последнего занятия
  */
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -129,6 +108,8 @@ schedule.scheduleJob("1 0 13 * * 4", async () => {
 schedule.scheduleJob("1 0 13 * * 5", async () => {
     const lesson = await Lesson.find()
     await buildWebinarMessage(lesson, "5")
+    dateOnFriday = moment().format("DD-MM-YYYY")
+    await buildPaymentNotificationMessage(lesson, dateOnFriday)
     dateOfNextSaturday = moment().add(1, "days").format("DD-MM-YYYY")
     await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
     await buildTheMessageWithConditions(lesson, "5")
@@ -148,55 +129,66 @@ schedule.scheduleJob("1 30 10 * * 6", async () => {
  * если вызвать функцию вновь, то предыдущая модель группы с данными будет удалена и на ее место встанет новая
  */
 bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
-    const admins = await  bot.getChatAdministrators(msg.chat.id)
-    let admin = false;
-    for (let i = 0; i < admins.length; i++) {
-        if (admins[i].user.id === msg.from!.id) {
-            admin = true
+    let isBotAdmin: boolean = false;
+    bot.getChatMember(msg.chat.id, msg.from!.id.toString()).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
         }
-    }
-    if (admin) {
-        try {
-
-            const ii = arr[1].replace(/\s+/g,' ').trim().split(" ")
-            const oldLesson = await Lesson.findOne({chatId: msg.chat.id})
-            if (oldLesson) {
-                oldLesson.delete()
+    });
+    if (isBotAdmin) {
+        const admins = await  bot.getChatAdministrators(msg.chat.id)
+        let admin = false;
+        for (let i = 0; i < admins.length; i++) {
+            if (admins[i].user.id === msg.from!.id) {
+                admin = true
             }
-            const lesson = await new Lesson({
-                chatId: msg.chat.id,
-                groupName: ii[0],
-                lessonDayOne: ii[1],
-                lessonDayTwo: ii[2],
-                webinarOne: ii[3],
-                webinarTwo: ii[4],
-                time: ii[5],
-                holidayOne: ii[6], // DateTime format DD-MM-YYYY
-                holidayTwo: ii[7], // DateTime format DD-MM-YYYY
-                lessonNumber: parseInt(ii[8]),
-                examNumber: ii[9]
-            })
-            lesson.dateOfLastLesson = moment().toISOString()
-            lesson.save()
-            const send = await bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")
-
-            setTimeout(() => {
-                bot.deleteMessage(msg.chat.id, send.message_id.toString())
-                bot.deleteMessage(msg.chat.id, msg.message_id.toString())
-            }, 20000)
-        } catch(err) {
-            await bot.sendMessage(msg.chat.id, "Неверный ввод")
         }
-    } else {
-        const funnyResponse = `
+        if (admin) {
+            try {
+
+                const ii = arr[1].replace(/\s+/g,' ').trim().split(" ")
+                const oldLesson = await Lesson.findOne({chatId: msg.chat.id})
+                if (oldLesson) {
+                    oldLesson.delete()
+                }
+                const lesson = await new Lesson({
+                    chatId: msg.chat.id,
+                    groupName: ii[0],
+                    lessonDayOne: ii[1],
+                    lessonDayTwo: ii[2],
+                    webinarOne: ii[3],
+                    webinarTwo: ii[4],
+                    time: ii[5],
+                    holidayOne: ii[6], // DateTime format DD-MM-YYYY
+                    holidayTwo: ii[7], // DateTime format DD-MM-YYYY
+                    lessonNumber: parseInt(ii[8]),
+                    examNumber: ii[9]
+                })
+                lesson.dateOfLastLesson = moment().toISOString()
+                lesson.save()
+                const send = await bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")
+
+                setTimeout(() => {
+                    bot.deleteMessage(msg.chat.id, send.message_id.toString())
+                    bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                }, 20000)
+            } catch(err) {
+                await bot.sendMessage(msg.chat.id, "Неверный ввод")
+            }
+        } else {
+            const funnyResponse = `
 <b>Катаны звуки</b>
 <b>Самурай промахнулся</b>
 <b>Сэппуку выход</b>
         `
-        await bot.sendMessage(msg.chat.id, funnyResponse, {
-            parse_mode: "HTML"
-        })
+            await bot.sendMessage(msg.chat.id, funnyResponse, {
+                parse_mode: "HTML"
+            })
+        }
+    } else {
+        await bot.sendMessage(msg.chat.id, "Ничего я не создам, пока я не админ")
     }
+
 })
 
 /**
@@ -242,9 +234,43 @@ bot.onText(/\/setup_(.+)/, async (msg, arr: any) => {
 })
 
 /**
+ * Установка даты последнего занятия, эта дата нужна для определения следующей контрольной, и эта дата сама устанавливается автоматически после оповещения о предстоящем занятии
+ * Но этой функцией нужно установить дату Первого занятия новой группы в самом начале только для того, чтобы продемонстрировать группе
+ * что можно проверять данные своей группы, с датой следующей контрольной, датами каникул, номеров занятий и контрольных и прочего
+ */
+bot.onText(/\/putdate_(.+)/, async (msg, arr: any) => {
+    const admins = await  bot.getChatAdministrators(msg.chat.id)
+    let admin = false;
+    for (let i = 0; i < admins.length; i++) {
+        if (admins[i].user.id === msg.from!.id) {
+            admin = true
+        }
+    }
+    if (admin) {
+        try {
+            const lesson = await Lesson.findOne({chatId: msg.chat.id})
+            lesson.dateOfLastLesson = arr[1]
+            lesson.save()
+            await bot.sendMessage(msg.chat.id, `Дата последнего занятия изменена на ${arr[1]}`)
+        } catch (err) {
+            await bot.sendMessage(msg.chat.id, "Неверный ввод")
+        }
+    } else {
+        const funnyResponse = `
+<b>Числа меняешь</b>
+<b>Урока первого ты</b>
+<b>Лучше не надо</b>
+        `
+        await bot.sendMessage(msg.chat.id, funnyResponse, {
+            parse_mode: "HTML"
+        })
+    }
+})
+
+/**
  * Получение инструкций, команда скрыта, нужно писать ее через / без единой ошибки, если студенты получат к ней доступ, то могут сломать бота
  */
-bot.onText(/\/givemetheinstructionsplease/, async (msg, arr: any) => {
+bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
     const admins = await  bot.getChatAdministrators(msg.chat.id)
     let admin = false;
     for (let i = 0; i < admins.length; i++) {
@@ -255,6 +281,8 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg, arr: any) => {
     if (admin) {
         try {
             const text: string = ` 
+        <strong>----------------------------------------------------------------</strong>
+        
         <b>Привет дорогой создатель группы!</b>
 
         
@@ -284,6 +312,18 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg, arr: any) => {
         
         <pre>Вы также можете редактировать номер следующего занятия или контрольной, вводите команду /setup_ и затем exam или lesson и через пробел на какой номер вы хотите поменять.</pre>
         <pre>Например, /setup_lesson 83 мы меняем номер следующего занятия на 83, или /setup_exam 9 мы ставим номер следующей контрольной 9</pre>
+        
+        <b>PPS:</b>
+        
+        <pre>Еще можно менять дату текущего (последнего, следующего, это все одно и то же занятие на самом деле) занятия, это скорее всего понадобится сделать только один раз (и то, если этого не сделать все само собой поставится после первого уведомления) для демонстрации на ориентации</pre>
+        <pre>Напишите команду /putdate_ и сразу без пробела напишите дату для последнего занятия. На ориентации это будет дата первого занятия кстати, так как счет идет с 1, и от этой даты и от этого занятия произойдет расчет даты следующей контрольной!</pre>
+        <pre>Дату пишем в формате dd-mm-yyyy</pre>
+        <pre>Например, /putdate_20-04-2021 значит, что дата "текущего" занятия 20 апреля 2021 года</pre>
+        <pre>Короче, при создании группы мы же в команде /build_ в конце напишем 1 1 так как следующее занятие 1 и следующая контрольная 1. Так вот ждя вот этого 1 (первого) занятия нужно указать настоящую дату, когда это занятие будет и все)))</pre>
+        
+                                            <pre>           &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774;</pre>
+        
+        <strong>----------------------------------------------------------------</strong>
 `
             await bot.sendMessage(msg.chat.id, text, {
                 parse_mode: "HTML"
@@ -303,12 +343,18 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg, arr: any) => {
     }
 })
 
-
 /**
  * Данная функция доступна всем (возможно добавим ее через BotFather в видимые команды), сообщение показывает данные по группе, текущему занятию, датой следующей контрольной
  * Сообщение автоматически удаляется спустя некоторое время
  */
 bot.onText(/\/show/, async (msg) => {
+    let isBotAdmin: boolean = false;
+    bot.getChatMember(msg.chat.id, msg.from!.id.toString()).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
+        }
+    });
+    if (isBotAdmin) {
     try {
         const lesson = await Lesson.findOne({chatId: msg.chat.id})
         const dif = lesson.lessonNumber % 8
@@ -360,7 +406,9 @@ bot.onText(/\/show/, async (msg) => {
     } catch(err) {
         await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
     }
-
+    } else{
+            await bot.sendMessage(msg.chat.id, "Хочу быть админом, иначе ничего не покажу")
+    }
 })
 
 /**
@@ -369,27 +417,28 @@ bot.onText(/\/show/, async (msg) => {
  * Подсказки данной команды нет, нужно вводить самому без ошибок, иначе не сработает
  */
 bot.onText(/\/allgroups/, async (msg) => {
+    const isPrivate = msg.chat.type === "private"
     const arrWithRestDays = [{key: 1, value: 26}, {key: 2, value: 23}, {key: 3, value: 19}, {key: 4, value: 16}, {key: 5, value: 12}, {key: 6, value: 9}, {key: 7, value: 5},  {key: 0, value: 2}]
-    try {
-        const lesson = await Lesson.find()
-        console.log(lesson)
+    if (isPrivate) {
+        try {
+            const lesson = await Lesson.find()
 
-        for (let i = 0; i < lesson.length; i++) {
-            const totalAmountOfUsers: number = await bot.getChatMembersCount(lesson[i].chatId)
-            const admins = await bot.getChatAdministrators(lesson[i].chatId)
-            const amountWithoutAdmins: number = totalAmountOfUsers - admins.length
-            const dif = lesson[i].lessonNumber % 8
-            let result = 0
-            arrWithRestDays.map((el: any) => {
-                if (el.key === dif) {
-                    result = el.value
-                    return null
-                }
-            })
-            if (lesson[i].lessonDayOne === "2") result -= 1
-            dateOfNextSaturday = moment(lesson[i].dateOfLastLesson).add(result, "days").format("DD-MM-YYYY")
+            for (let i = 0; i < lesson.length; i++) {
+                const totalAmountOfUsers: number = await bot.getChatMembersCount(lesson[i].chatId)
+                const admins = await bot.getChatAdministrators(lesson[i].chatId)
+                const amountWithoutAdmins: number = totalAmountOfUsers - admins.length
+                const dif = lesson[i].lessonNumber % 8
+                let result = 0
+                arrWithRestDays.map((el: any) => {
+                    if (el.key === dif) {
+                        result = el.value
+                        return null
+                    }
+                })
+                if (lesson[i].lessonDayOne === "2") result -= 1
+                dateOfNextSaturday = moment(lesson[i].dateOfLastLesson).add(result, "days").format("DD-MM-YYYY")
 
-            const text = `
+                const text = `
 
 <strong>--------------------------------------</strong>
 
@@ -416,17 +465,196 @@ bot.onText(/\/allgroups/, async (msg) => {
 <strong>--------------------------------------</strong>
 
 `
-            await bot.sendMessage(msg.chat.id, (i+1).toString())
-            await bot.sendMessage(msg.chat.id, text, {
+                await bot.sendMessage(msg.chat.id, (i+1).toString())
+                await bot.sendMessage(msg.chat.id, text, {
+                    parse_mode: "HTML"
+                })
+            }
+        } catch(err) {
+            await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
+        }
+    } else {
+        await bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично пожалуйста, я не могу когда все смотрят")
+    }
+})
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Квест, разные команды, которые ведут к новым задачам, ответы буду писать в описании к каждой команде
+ */
+
+/**
+ * Первый шифр, азбука Морзе, отправляется аудиофайлом. Зашифрованная команда gotonext
+ */
+bot.onText(/\/letsplay/, async (msg) => {
+    let isBotAdmin: boolean = false;
+    bot.getChatMember(msg.chat.id, msg.from!.id.toString()).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
+        }
+    });
+    if (isBotAdmin) {
+        try {
+            const text = `
+            <b>Как команду напиши мне что ты слышишь в этом файле</b>
+        `
+            const send = await bot.sendAudio(msg.chat.id, "./ciphers/guesswhat.wav", {
+                caption: text,
                 parse_mode: "HTML"
             })
+            await setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 120000)
+        } catch (err) {
+            await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
         }
-    } catch(err) {
-        await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
+    } else {
+        await bot.sendMessage(msg.chat.id, "Я бы с радостью показал и затем удалил квестовое сообщение, но я лишь обычный юзер, а не админ((((")
+    }
+})
+
+/**
+ *  Это обычный код цезаря, его можно получить только в личной переписке. Если кто-то напишет команду в общий чат, то команда сразу удалится
+ *  чтобы никто не скопировал то, что смог найти другой. Шифр имеет отступ +7 символов, ведет к команде stepthree
+ */
+bot.onText(/\/gotonext/, async (msg) => {
+    try {
+        const isPrivate = msg.chat.type === "private"
+        if (isPrivate) {
+            await bot.sendMessage(msg.chat.id, "dypal uvd wslhzl av tl aol jvtthuk zalwaoyll")
+        } else {
+            const send = await bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично, я не могу при всех")
+            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+            await setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 7000)
+        }
+    } catch (err) {
+        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
     }
 
 })
 
+/**
+ *  Код перебора, в каждой группе букв берем сначала все первые буквы подряд, потом вторые и так далее, пока не получим предложение.
+ *  Код ведет к команде website (исходное предложение you are on the right way my friend now write me the command website)
+ */
+bot.onText(/\/stepthree/, async (msg) => {
+    try {
+        const isPrivate = msg.chat.type === "private"
+        if (isPrivate) {
+            await bot.sendMessage(msg.chat.id, "yhynen oemotd urywhw aifwee rgrrcb ehiios otetmi nwnemt tadmae")
+        } else {
+            const send = await bot.sendMessage(msg.chat.id, "Если второй шаг был в личной переписке, почему третий должен быть в общем чате?")
+            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+            await setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 7000)
+        }
+    } catch (err) {
+        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+
+    }
+})
+
+/**
+ * Отсюда мы попадем на сайт, в котором через испектор в тэгах разметки спрятаны в data фттрибутах уравнения
+ * и пояснение что нужно написать ответы подряд слитно в качестве команды боту
+ * Уранения:
+ * 1) 4x–36=x+36   Ответ: 24
+ * 2) x=(7x)-18    Ответ: 3
+ * 3) x+75=4x      Ответ: 25
+ * 4) 2x/3+3x/2=13 Ответ: 6
+ * Итоговая команда /243256
+ */
+bot.onText(/\/website/, async (msg) => {
+    try {
+        const isPrivate = msg.chat.type === "private"
+        if (isPrivate) {
+            await bot.sendMessage(msg.chat.id, "https://starman-cook.github.io/cipher/html.html")
+        } else {
+            const send = await bot.sendMessage(msg.chat.id, "Вы издеваетесь))?")
+            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+            await setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 7000)
+        }
+    } catch (err) {
+        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+
+    }
+})
+
+/**
+ *  Это финальная задача, довольно сложная. Код типа vigenere, который по ключу решается
+ *  ключ спрятан в групповом чате, нужно написать эту команду сначала в группу, получить ключ
+ *  отсальной шифр спрятан в картинке, нужно скачать картинку полученную по коду
+ *  и поменять расширение на txt, тогда в самом низу будет шифр и подсказка, что нужен ключ для расшифровки
+ *  ключ notredame
+ *  код gvx cevt oszateh ls uezhavgkaytvcg
+ *  команда итоговая iamthechampion
+ */
+bot.onText(/\/243256/, async (msg) => {
+    try {
+        const isPrivate = msg.chat.type === "private"
+        if (isPrivate) {
+            const text: string = `
+        <b>Не нужно ничего искать, нужно лишь скачать и что-то поменять</b>
+        `
+            await bot.sendDocument(msg.chat.id, "./ciphers/lebowski_hidden_cipher.jpg", {
+                caption: text,
+                parse_mode: "HTML"
+            })
+        } else {
+            const send = await bot.sendMessage(msg.chat.id, "Вы далеко зашли, и вами движет любопытство, что же ответит бот в общем чате на этот раз. А отвечу я 'notredame'")
+            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+            await setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 7000)
+        }
+    } catch (err) {
+        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+
+    }
+})
+
+/**
+ *  Это последняя на данный момент команда для победителя, более шифров нет, просто поздравления и просьба сообщить саппортам
+ *  о своей победе))) Подумать о призах, может скидку тому, кто первый решит?
+ */
+bot.onText(/\/iamthechampion/, async (msg) => {
+    try {
+        const isPrivate = msg.chat.type === "private"
+        if (isPrivate) {
+            const text: string = `
+                                <b>&#9812; Вы победили!!!&#127881;&#127881;&#127881;</b>
+<b>&#9812; Отличная работа ${msg.chat.first_name}&#127881;&#127881;&#127881;</b>
+<b>&#9812; Сообщите о своей победе саппорту&#127881;&#127881;&#127881;</b>
+<b>&#9812; Мы придумаем как вас наградить)))&#127881;&#127881;&#127881;</b>
+<b>&#9812; Вы супер!&#127881;&#127881;&#127881;</b>
+        `
+            await bot.sendPhoto(msg.chat.id, "./ciphers/winner.jpg" , {
+                caption: text,
+                parse_mode: 'HTML'
+            })
+        } else {
+            const textWinnerToGroup = `
+<b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>
+                <b>&#9812; Смотрите все, ${msg.from!.first_name} решил головоломку! &#9812;</b>
+<b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>
+`
+            await bot.sendMessage(msg.chat.id, textWinnerToGroup, {
+                parse_mode: "HTML"
+            })
+            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+        }
+    } catch (err) {
+        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+
+    }
+})
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
