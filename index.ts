@@ -8,6 +8,7 @@ import schedule from 'node-schedule'
 import moment from 'moment'
 import {LessonInterface} from './app/interfaces/lesson_interface'
 
+
 /**
  8. Создать функционал логирования ошибок работы бота
  9. Реализовать функционал отправки логов ошибок по расписанию *****
@@ -130,7 +131,8 @@ schedule.scheduleJob("1 30 10 * * 6", async () => {
  */
 bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
     let isBotAdmin: boolean = false;
-    bot.getChatMember(msg.chat.id, msg.from!.id.toString()).then(function (c) {
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
         }
@@ -271,16 +273,18 @@ bot.onText(/\/putdate_(.+)/, async (msg, arr: any) => {
  * Получение инструкций, команда скрыта, нужно писать ее через / без единой ошибки, если студенты получат к ней доступ, то могут сломать бота
  */
 bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
-    const admins = await  bot.getChatAdministrators(msg.chat.id)
-    let admin = false;
-    for (let i = 0; i < admins.length; i++) {
-        if (admins[i].user.id === msg.from!.id) {
-            admin = true
+    const isPrivate = msg.chat.type === "private"
+    if (!isPrivate) {
+        const admins = await bot.getChatAdministrators(msg.chat.id)
+        let admin = false;
+        for (let i = 0; i < admins.length; i++) {
+            if (admins[i].user.id === msg.from!.id) {
+                admin = true
+            }
         }
-    }
-    if (admin) {
-        try {
-            const text: string = ` 
+        if (admin) {
+            try {
+                const text: string = ` 
         <strong>----------------------------------------------------------------</strong>
         
         <b>Привет дорогой создатель группы!</b>
@@ -321,25 +325,31 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
         <pre>Например, /putdate_20-04-2021 значит, что дата "текущего" занятия 20 апреля 2021 года</pre>
         <pre>Короче, при создании группы мы же в команде /build_ в конце напишем 1 1 так как следующее занятие 1 и следующая контрольная 1. Так вот ждя вот этого 1 (первого) занятия нужно указать настоящую дату, когда это занятие будет и все)))</pre>
         
+         <b>PPPS:</b>
+         <pre>Чтобы посмотреть данные всех групп, введите команду /allgroups в личной переписке с ботом</pre>
+
                                             <pre>           &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774;</pre>
         
         <strong>----------------------------------------------------------------</strong>
 `
-            await bot.sendMessage(msg.chat.id, text, {
-                parse_mode: "HTML"
-            })
-        } catch(err) {
-            await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
-        }
-    } else {
-        const funnyResponse = `
+                await bot.sendMessage(msg.chat.id, text, {
+                    parse_mode: "HTML"
+                })
+            } catch (err) {
+                await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
+            }
+        } else {
+            const funnyResponse = `
 <b>Узреть желаешь</b>
 <b>Инструкцию программы</b>
 <b>Пстота кругом</b>
         `
-        await bot.sendMessage(msg.chat.id, funnyResponse, {
-            parse_mode: "HTML"
-        })
+            await bot.sendMessage(msg.chat.id, funnyResponse, {
+                parse_mode: "HTML"
+            })
+        }
+    } else {
+        await bot.sendMessage(msg.chat.id, "Лишь в групповом чате отвечаю я на данную команду")
     }
 })
 
@@ -349,7 +359,8 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
  */
 bot.onText(/\/show/, async (msg) => {
     let isBotAdmin: boolean = false;
-    bot.getChatMember(msg.chat.id, msg.from!.id.toString()).then(function (c) {
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
         }
@@ -365,8 +376,12 @@ bot.onText(/\/show/, async (msg) => {
                 result = el.value
             }
         })
+        const parts = lesson.dateOfLastLesson.split("-");
+        const dt = new Date(parseInt(parts[2], 10),
+                      parseInt(parts[1], 10) - 1,
+                             parseInt(parts[0], 10));
         if (lesson.lessonDayOne === "2") result -= 1
-        dateOfNextSaturday = moment(lesson.dateOfLastLesson).add(result, "days").format("DD-MM-YYYY")
+        dateOfNextSaturday = moment(dt).add(result, "days").format("DD-MM-YYYY")
 
         const text = `
 
@@ -404,7 +419,7 @@ bot.onText(/\/show/, async (msg) => {
             bot.deleteMessage(msg.chat.id, send.message_id.toString())
         }, 30000) // 30 секунд до удаления сообщения
     } catch(err) {
-        await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
+        await bot.sendMessage(msg.chat.id, "Группа еще не создана")
     }
     } else{
             await bot.sendMessage(msg.chat.id, "Хочу быть админом, иначе ничего не покажу")
@@ -435,8 +450,12 @@ bot.onText(/\/allgroups/, async (msg) => {
                         return null
                     }
                 })
+                const parts = lesson[i].dateOfLastLesson.split("-");
+                const dt = new Date(parseInt(parts[2], 10),
+                                parseInt(parts[1], 10) - 1,
+                                        parseInt(parts[0], 10));
                 if (lesson[i].lessonDayOne === "2") result -= 1
-                dateOfNextSaturday = moment(lesson[i].dateOfLastLesson).add(result, "days").format("DD-MM-YYYY")
+                dateOfNextSaturday = moment(dt).add(result, "days").format("DD-MM-YYYY")
 
                 const text = `
 
@@ -489,9 +508,10 @@ bot.onText(/\/allgroups/, async (msg) => {
  */
 bot.onText(/\/letsplay/, async (msg) => {
     let isBotAdmin: boolean = false;
-    bot.getChatMember(msg.chat.id, msg.from!.id.toString()).then(function (c) {
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
-            isBotAdmin = true
+            isBotAdmin =  true
         }
     });
     if (isBotAdmin) {
@@ -520,21 +540,31 @@ bot.onText(/\/letsplay/, async (msg) => {
  *  чтобы никто не скопировал то, что смог найти другой. Шифр имеет отступ +7 символов, ведет к команде stepthree
  */
 bot.onText(/\/gotonext/, async (msg) => {
-    try {
-        const isPrivate = msg.chat.type === "private"
-        if (isPrivate) {
-            await bot.sendMessage(msg.chat.id, "dypal uvd wslhzl av tl aol jvtthuk zalwaoyll")
-        } else {
-            const send = await bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично, я не могу при всех")
-            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
-            await setTimeout(() => {
-                bot.deleteMessage(msg.chat.id, send.message_id.toString())
-            }, 7000)
+    let isBotAdmin: boolean = false;
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
         }
-    } catch (err) {
-        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
-    }
-
+    });
+        try {
+            const isPrivate = msg.chat.type === "private"
+            if (isPrivate) {
+                await bot.sendMessage(msg.chat.id, "dypal uvd wslhzl av tl aol jvtthuk zalwaoyll")
+            } else {
+                if (isBotAdmin) {
+                    const send = await bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично, я не могу при всех")
+                    await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                    await setTimeout(() => {
+                        bot.deleteMessage(msg.chat.id, send.message_id.toString())
+                    }, 7000)
+                } else {
+                    await bot.sendMessage(msg.chat.id, "Как вы узнали эту команду при том, что я не админ?? Вы читер?")
+                }
+            }
+        } catch (err) {
+            await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+        }
 })
 
 /**
@@ -542,21 +572,32 @@ bot.onText(/\/gotonext/, async (msg) => {
  *  Код ведет к команде website (исходное предложение you are on the right way my friend now write me the command website)
  */
 bot.onText(/\/stepthree/, async (msg) => {
-    try {
-        const isPrivate = msg.chat.type === "private"
-        if (isPrivate) {
-            await bot.sendMessage(msg.chat.id, "yhynen oemotd urywhw aifwee rgrrcb ehiios otetmi nwnemt tadmae")
-        } else {
-            const send = await bot.sendMessage(msg.chat.id, "Если второй шаг был в личной переписке, почему третий должен быть в общем чате?")
-            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
-            await setTimeout(() => {
-                bot.deleteMessage(msg.chat.id, send.message_id.toString())
-            }, 7000)
+    let isBotAdmin: boolean = false;
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
         }
-    } catch (err) {
-        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+    });
+        try {
+            const isPrivate = msg.chat.type === "private"
+            if (isPrivate) {
+                await bot.sendMessage(msg.chat.id, "yhynen oemotd urywhw aifwee rgrrcb ehiios otetmi nwnemt tadmae")
+            } else {
+                if (isBotAdmin) {
+                    const send = await bot.sendMessage(msg.chat.id, "Если второй шаг был в личной переписке, почему третий должен быть в общем чате?")
+                    await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                    await setTimeout(() => {
+                        bot.deleteMessage(msg.chat.id, send.message_id.toString())
+                    }, 7000)
+                } else {
+                    await bot.sendMessage(msg.chat.id, "Похоже да, вы читер, фуууу")
+                }
+            }
+        } catch (err) {
+            await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
 
-    }
+        }
 })
 
 /**
@@ -570,21 +611,32 @@ bot.onText(/\/stepthree/, async (msg) => {
  * Итоговая команда /243256
  */
 bot.onText(/\/website/, async (msg) => {
-    try {
-        const isPrivate = msg.chat.type === "private"
-        if (isPrivate) {
-            await bot.sendMessage(msg.chat.id, "https://starman-cook.github.io/cipher/html.html")
-        } else {
-            const send = await bot.sendMessage(msg.chat.id, "Вы издеваетесь))?")
-            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
-            await setTimeout(() => {
-                bot.deleteMessage(msg.chat.id, send.message_id.toString())
-            }, 7000)
+    let isBotAdmin: boolean = false;
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
         }
-    } catch (err) {
-        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+    });
+        try {
+            const isPrivate = msg.chat.type === "private"
+            if (isPrivate) {
+                await bot.sendMessage(msg.chat.id, "https://starman-cook.github.io/cipher/html.html")
+            } else {
+                if (isBotAdmin) {
+                    const send = await bot.sendMessage(msg.chat.id, "Вы издеваетесь))?")
+                    await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                    await setTimeout(() => {
+                        bot.deleteMessage(msg.chat.id, send.message_id.toString())
+                    }, 7000)
+                }   else {
+                    await bot.sendMessage(msg.chat.id, "Я читеру бы написал 'Вы издеваетесь?', но я не админ, поэтому пишу всякую фигню... ")
+                }
+            }
+        } catch (err) {
+            await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
 
-    }
+        }
 })
 
 /**
@@ -597,27 +649,38 @@ bot.onText(/\/website/, async (msg) => {
  *  команда итоговая iamthechampion
  */
 bot.onText(/\/243256/, async (msg) => {
-    try {
-        const isPrivate = msg.chat.type === "private"
-        if (isPrivate) {
-            const text: string = `
-        <b>Не нужно ничего искать, нужно лишь скачать и что-то поменять</b>
-        `
-            await bot.sendDocument(msg.chat.id, "./ciphers/lebowski_hidden_cipher.jpg", {
-                caption: text,
-                parse_mode: "HTML"
-            })
-        } else {
-            const send = await bot.sendMessage(msg.chat.id, "Вы далеко зашли, и вами движет любопытство, что же ответит бот в общем чате на этот раз. А отвечу я 'notredame'")
-            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
-            await setTimeout(() => {
-                bot.deleteMessage(msg.chat.id, send.message_id.toString())
-            }, 7000)
+    let isBotAdmin: boolean = false;
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
         }
-    } catch (err) {
-        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+    });
+        try {
+            const isPrivate = msg.chat.type === "private"
+            if (isPrivate) {
+                const text: string = `
+            <b>Не нужно ничего искать, нужно лишь скачать и что-то поменять</b>
+            `
+                await bot.sendDocument(msg.chat.id, "./ciphers/lebowski_hidden_cipher.jpg", {
+                    caption: text,
+                    parse_mode: "HTML"
+                })
+            } else {
+                if (isBotAdmin) {
+                    const send = await bot.sendMessage(msg.chat.id, "Вы далеко зашли, и вами движет любопытство, что же ответит бот в общем чате на этот раз. А отвечу я 'notredame'")
+                    await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                    await setTimeout(() => {
+                        bot.deleteMessage(msg.chat.id, send.message_id.toString())
+                    }, 7000)
+                } else {
+                    await bot.sendMessage(msg.chat.id, "Будь я админом, я дал бы вам крайне важную подсказку по квесту, а так фиг вам))")
+                }
+            }
+        } catch (err) {
+            await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
 
-    }
+        }
 })
 
 /**
@@ -625,35 +688,46 @@ bot.onText(/\/243256/, async (msg) => {
  *  о своей победе))) Подумать о призах, может скидку тому, кто первый решит?
  */
 bot.onText(/\/iamthechampion/, async (msg) => {
-    try {
-        const isPrivate = msg.chat.type === "private"
-        if (isPrivate) {
-            const text: string = `
-                                <b>&#9812; Вы победили!!!&#127881;&#127881;&#127881;</b>
-<b>&#9812; Отличная работа ${msg.chat.first_name}&#127881;&#127881;&#127881;</b>
-<b>&#9812; Сообщите о своей победе саппорту&#127881;&#127881;&#127881;</b>
-<b>&#9812; Мы придумаем как вас наградить)))&#127881;&#127881;&#127881;</b>
-<b>&#9812; Вы супер!&#127881;&#127881;&#127881;</b>
-        `
-            await bot.sendPhoto(msg.chat.id, "./ciphers/winner.jpg" , {
-                caption: text,
-                parse_mode: 'HTML'
-            })
-        } else {
-            const textWinnerToGroup = `
-<b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>
-                <b>&#9812; Смотрите все, ${msg.from!.first_name} решил головоломку! &#9812;</b>
-<b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>
-`
-            await bot.sendMessage(msg.chat.id, textWinnerToGroup, {
-                parse_mode: "HTML"
-            })
-            await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+    let isBotAdmin: boolean = false;
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
         }
-    } catch (err) {
-        await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+    });
+        try {
+            const isPrivate = msg.chat.type === "private"
+            if (isPrivate) {
+                const text: string = `
+                                    <b>&#9812; Вы победили!!!&#127881;&#127881;&#127881;</b>
+    <b>&#9812; Отличная работа ${msg.chat.first_name}&#127881;&#127881;&#127881;</b>
+    <b>&#9812; Сообщите о своей победе саппорту&#127881;&#127881;&#127881;</b>
+    <b>&#9812; Мы придумаем как вас наградить)))&#127881;&#127881;&#127881;</b>
+    <b>&#9812; Вы супер!&#127881;&#127881;&#127881;</b>
+            `
+                await bot.sendPhoto(msg.chat.id, "./ciphers/winner.jpg" , {
+                    caption: text,
+                    parse_mode: 'HTML'
+                })
+            } else {
+                if (isBotAdmin) {
+                    const textWinnerToGroup = `
+    <b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>
+                    <b>&#9812; Смотрите все, ${msg.from!.first_name} решил головоломку! &#9812;</b>
+    <b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>
+    `
+                    await bot.sendMessage(msg.chat.id, textWinnerToGroup, {
+                        parse_mode: "HTML"
+                    })
+                    await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                }  else {
+                    await bot.sendMessage(msg.chat.id, "Я бы сказал кто здесь победитель, со смайликами всякими, но я не админ... и как вы дошли до этой команды без бота админа? Удалите команду, чтобы не спойлерить решение")
+                }
+            }
+        } catch (err) {
+            await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
 
-    }
+        }
 })
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
