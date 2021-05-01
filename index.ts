@@ -12,7 +12,7 @@ import {LessonInterface} from './app/interfaces/lesson_interface'
 /**
  8. Создать функционал логирования ошибок работы бота
  9. Реализовать функционал отправки логов ошибок по расписанию *****
- 10. Добавить СетАп для установки даты последнего занятия
+ 10. Добавить возможность удалять группы
  */
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -327,6 +327,11 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
         
          <b>PPPS:</b>
          <pre>Чтобы посмотреть данные всех групп, введите команду /allgroups в личной переписке с ботом</pre>
+         
+         <b>PPPPS:</b>
+         <pre>Чтобы удалить группу, напишите хоть лично, хоть в группе команду /delete_ затем id группы (можно получить с помощью /allgroups) и затем через пробел пароль, пароль знают админы</pre>
+         <pre>Например, кто-то создал левую ненужную или тестовую группу с id 608ce9694d1311418c93ec9f</pre>
+         <pre>Чтобы удалить эту группу напишите /delete_608ce9694d1311418c93ec9f ****** (где ****** это пароль)</pre>
 
                                             <pre>           &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774;</pre>
         
@@ -342,7 +347,7 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
             const funnyResponse = `
 <b>Узреть желаешь</b>
 <b>Инструкцию программы</b>
-<b>Пстота кругом</b>
+<b>Пустота кругом</b>
         `
             await bot.sendMessage(msg.chat.id, funnyResponse, {
                 parse_mode: "HTML"
@@ -437,7 +442,9 @@ bot.onText(/\/allgroups/, async (msg) => {
     if (isPrivate) {
         try {
             const lesson = await Lesson.find()
-
+            if (lesson.length === 0) {
+                await bot.sendMessage(msg.chat.id, "Групп в наличии нет, какой кошмар")
+            }
             for (let i = 0; i < lesson.length; i++) {
                 const totalAmountOfUsers: number = await bot.getChatMembersCount(lesson[i].chatId)
                 const admins = await bot.getChatAdministrators(lesson[i].chatId)
@@ -481,6 +488,8 @@ bot.onText(/\/allgroups/, async (msg) => {
 
 <b>Вторые каникулы</b><pre>#${lesson[i].holidayTwo}</pre>
 
+<b>ID группы</b><pre>${lesson[i]._id}</pre>
+
 <strong>--------------------------------------</strong>
 
 `
@@ -497,6 +506,36 @@ bot.onText(/\/allgroups/, async (msg) => {
     }
 })
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Функция для удаления группы, удалять можно любую группу, это сделано потому, что кто угодно может создать групповой чат с ботом и создать левую группу, которая будет падать в список групп и засорять его
+ * Но вы наверное думаете, так и удалить кто угодно сможет, это ж капец. Но не бесспокойтесь, чтобы удалить группу, нужно ввести пароль
+ * Вы вводите команду /delete_ затем id группы для удаления (id можно получить из списка всех групп, это нужно потому, что имена могут быть одиннаковыми) и затем через пробел пишите пароль
+ * Пароль пока не придумал где хранить, пусть это будет coolPasha
+ */
+bot.onText(/\/delete_(.+)/, async (msg, arr: any) => {
+    const funnyResponse = `
+<b>Группу удалить</b>
+<b>Оставить пустоту нам</b>
+<b>Вам мало чести</b>
+        `
+        try {
+            const ii = arr[1].replace(/\s+/g,' ').trim().split(" ")
+            const lesson = await Lesson.findOne({_id: ii[0]})
+            if (ii[1] === "coolPasha") {
+                await lesson.delete()
+                await bot.sendMessage(msg.chat.id, `Группа ${lesson.groupName} успешно удалена из базы`)
+            } else {
+                await bot.sendMessage(msg.chat.id, funnyResponse, {
+                    parse_mode: "HTML"
+                })
+            }
+        } catch (err) {
+            await bot.sendMessage(msg.chat.id, funnyResponse, {
+                parse_mode: "HTML"
+            })
+        }
+})
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -785,14 +824,14 @@ async function buildWebinarMessage(lesson: Array<LessonInterface>, day: string) 
 }
 
 /**
- * Функция для сообщения о контролльной в день контрольной
+ * Функция для сообщения о контрольной в день контрольной
  */
 async function buildExamMessage(lesson: Array<LessonInterface>) {
     const date = moment().format("DD-MM-YYYY")
     for (let i = 0; i < lesson.length; i++) {
         let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
         if (holiday) continue
-        if ((lesson[i].lessonNumber - 1) % 8 === 0) {
+        if ((lesson[i].lessonNumber - 1) % 8 === 0 && lesson[i].lessonNumber >= 8) {
             await buildTheMessage(lesson[i].chatId, "Контрольная", lesson[i].examNumber + "", "11:00", date, `готовьте треккер если вы сдаете онлайн, включайте зум, приготовьте ручку и бумагу, лишними не будут))`)
         }
         lesson[i].examNumber += 1
