@@ -12,7 +12,6 @@ import {LessonInterface} from './app/interfaces/lesson_interface'
 /**
  8. Создать функционал логирования ошибок работы бота
  9. Реализовать функционал отправки логов ошибок по расписанию *****
- 10. Добавить возможность удалять группы
  */
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -166,7 +165,6 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
                     lessonNumber: parseInt(ii[8]),
                     examNumber: ii[9]
                 })
-                lesson.dateOfLastLesson = moment().toISOString()
                 lesson.save()
                 const send = await bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")
 
@@ -373,7 +371,12 @@ bot.onText(/\/show/, async (msg) => {
     if (isBotAdmin) {
     try {
         const lesson = await Lesson.findOne({chatId: msg.chat.id})
-        const dif = lesson.lessonNumber % 8
+        let dif: number
+        if (lesson.lessonNumber > 1) {
+            dif = (lesson.lessonNumber - 1) % 8
+        } else {
+            dif = lesson.lessonNumber % 8
+        }
         const arrWithRestDays = [{key: 1, value: 26}, {key: 2, value: 23}, {key: 3, value: 19}, {key: 4, value: 16}, {key: 5, value: 12}, {key: 6, value: 9}, {key: 7, value: 5},  {key: 0, value: 2}]
         let result = 0
         arrWithRestDays.forEach((el: any) => {
@@ -381,10 +384,8 @@ bot.onText(/\/show/, async (msg) => {
                 result = el.value
             }
         })
-        const parts = lesson.dateOfLastLesson.split("-");
-        const dt = new Date(parseInt(parts[2], 10),
-                      parseInt(parts[1], 10) - 1,
-                             parseInt(parts[0], 10));
+        const parts = lesson.dateOfLastLesson.split("-")
+        const dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0])
         if (lesson.lessonDayOne === "2") result -= 1
         dateOfNextSaturday = moment(dt).add(result, "days").format("DD-MM-YYYY")
 
@@ -449,7 +450,13 @@ bot.onText(/\/allgroups/, async (msg) => {
                 const totalAmountOfUsers: number = await bot.getChatMembersCount(lesson[i].chatId)
                 const admins = await bot.getChatAdministrators(lesson[i].chatId)
                 const amountWithoutAdmins: number = totalAmountOfUsers - admins.length
-                const dif = lesson[i].lessonNumber % 8
+                let dif: number
+                if (lesson[i].lessonNumber > 1) {
+                    dif = (lesson[i].lessonNumber - 1) % 8
+                } else {
+                    dif = lesson[i].lessonNumber % 8
+                }
+
                 let result = 0
                 arrWithRestDays.map((el: any) => {
                     if (el.key === dif) {
@@ -457,10 +464,9 @@ bot.onText(/\/allgroups/, async (msg) => {
                         return null
                     }
                 })
-                const parts = lesson[i].dateOfLastLesson.split("-");
-                const dt = new Date(parseInt(parts[2], 10),
-                                parseInt(parts[1], 10) - 1,
-                                        parseInt(parts[0], 10));
+                const parts = lesson[i].dateOfLastLesson.split("-")
+                const dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0])
+
                 if (lesson[i].lessonDayOne === "2") result -= 1
                 dateOfNextSaturday = moment(dt).add(result, "days").format("DD-MM-YYYY")
 
@@ -798,7 +804,6 @@ async function buildTheMessageWithConditions(lesson: Array<LessonInterface>, day
                 await buildTheMessage(lesson[i].chatId, "Занятие", lesson[i].lessonNumber+"", "16:00", date, "читайте раздатку перед занятием")
             }
             lesson[i].lessonNumber += 1
-            lesson[i].dateOfLastLesson = moment().toISOString()
             // @ts-ignore
             lesson[i].save()
         }

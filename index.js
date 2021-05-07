@@ -50,7 +50,6 @@ var moment_1 = __importDefault(require("moment"));
 /**
  8. Создать функционал логирования ошибок работы бота
  9. Реализовать функционал отправки логов ошибок по расписанию *****
- 10. Добавить возможность удалять группы
  */
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -297,7 +296,6 @@ bot.onText(/\/build_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0
                     })];
             case 6:
                 lesson = _a.sent();
-                lesson.dateOfLastLesson = moment_1.default().toISOString();
                 lesson.save();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")];
             case 7:
@@ -526,7 +524,12 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
                 return [4 /*yield*/, lesson_model_1.Lesson.findOne({ chatId: msg.chat.id })];
             case 4:
                 lesson = _a.sent();
-                dif_1 = lesson.lessonNumber % 8;
+                if (lesson.lessonNumber > 1) {
+                    dif_1 = (lesson.lessonNumber - 1) % 8;
+                }
+                else {
+                    dif_1 = lesson.lessonNumber % 8;
+                }
                 arrWithRestDays = [{ key: 1, value: 26 }, { key: 2, value: 23 }, { key: 3, value: 19 }, { key: 4, value: 16 }, { key: 5, value: 12 }, { key: 6, value: 9 }, { key: 7, value: 5 }, { key: 0, value: 2 }];
                 result_1 = 0;
                 arrWithRestDays.forEach(function (el) {
@@ -535,7 +538,7 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
                     }
                 });
                 parts = lesson.dateOfLastLesson.split("-");
-                dt = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+                dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0]);
                 if (lesson.lessonDayOne === "2")
                     result_1 -= 1;
                 dateOfNextSaturday = moment_1.default(dt).add(result_1, "days").format("DD-MM-YYYY");
@@ -601,7 +604,12 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
                             case 2:
                                 admins = _b.sent();
                                 amountWithoutAdmins = totalAmountOfUsers - admins.length;
-                                dif = lesson[i].lessonNumber % 8;
+                                if (lesson[i].lessonNumber > 1) {
+                                    dif = (lesson[i].lessonNumber - 1) % 8;
+                                }
+                                else {
+                                    dif = lesson[i].lessonNumber % 8;
+                                }
                                 result = 0;
                                 arrWithRestDays.map(function (el) {
                                     if (el.key === dif) {
@@ -610,7 +618,7 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
                                     }
                                 });
                                 parts = lesson[i].dateOfLastLesson.split("-");
-                                dt = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+                                dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0]);
                                 if (lesson[i].lessonDayOne === "2")
                                     result -= 1;
                                 dateOfNextSaturday = moment_1.default(dt).add(result, "days").format("DD-MM-YYYY");
@@ -1117,7 +1125,6 @@ function buildTheMessageWithConditions(lesson, day) {
                     _a.label = 5;
                 case 5:
                     lesson[i].lessonNumber += 1;
-                    lesson[i].dateOfLastLesson = moment_1.default().toISOString();
                     // @ts-ignore
                     lesson[i].save();
                     _a.label = 6;
