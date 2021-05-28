@@ -804,6 +804,7 @@ async function buildTheMessageWithConditions(lesson: Array<LessonInterface>, day
                 await buildTheMessage(lesson[i].chatId, "Занятие", lesson[i].lessonNumber+"", "16:00", date, "читайте раздатку перед занятием")
             }
             lesson[i].lessonNumber += 1
+            lesson[i].dateOfLastLesson = date
             // @ts-ignore
             lesson[i].save()
         }
@@ -838,8 +839,8 @@ async function buildExamMessage(lesson: Array<LessonInterface>) {
         if (holiday) continue
         if ((lesson[i].lessonNumber - 1) % 8 === 0 && lesson[i].lessonNumber >= 8) {
             await buildTheMessage(lesson[i].chatId, "Контрольная", lesson[i].examNumber + "", "11:00", date, `готовьте треккер если вы сдаете онлайн, включайте зум, приготовьте ручку и бумагу, лишними не будут))`)
+            lesson[i].examNumber += 1
         }
-        lesson[i].examNumber += 1
         // @ts-ignore
         lesson[i].save()
     }

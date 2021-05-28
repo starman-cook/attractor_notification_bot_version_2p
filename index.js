@@ -1125,6 +1125,7 @@ function buildTheMessageWithConditions(lesson, day) {
                     _a.label = 5;
                 case 5:
                     lesson[i].lessonNumber += 1;
+                    lesson[i].dateOfLastLesson = date;
                     // @ts-ignore
                     lesson[i].save();
                     _a.label = 6;
@@ -1191,9 +1192,9 @@ function buildExamMessage(lesson) {
                     return [4 /*yield*/, buildTheMessage(lesson[i].chatId, "Контрольная", lesson[i].examNumber + "", "11:00", date, "\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0442\u0440\u0435\u043A\u043A\u0435\u0440 \u0435\u0441\u043B\u0438 \u0432\u044B \u0441\u0434\u0430\u0435\u0442\u0435 \u043E\u043D\u043B\u0430\u0439\u043D, \u0432\u043A\u043B\u044E\u0447\u0430\u0439\u0442\u0435 \u0437\u0443\u043C, \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0440\u0443\u0447\u043A\u0443 \u0438 \u0431\u0443\u043C\u0430\u0433\u0443, \u043B\u0438\u0448\u043D\u0438\u043C\u0438 \u043D\u0435 \u0431\u0443\u0434\u0443\u0442))")];
                 case 2:
                     _a.sent();
+                    lesson[i].examNumber += 1;
                     _a.label = 3;
                 case 3:
-                    lesson[i].examNumber += 1;
                     // @ts-ignore
                     lesson[i].save();
                     _a.label = 4;
