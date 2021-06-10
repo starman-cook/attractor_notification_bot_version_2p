@@ -138,8 +138,9 @@ schedule.scheduleJob("1 0 13 * * 5", async () => {
 /**
  * Суббота
  */
-schedule.scheduleJob("1 30 10 * * 6", async () => {
+schedule.scheduleJob("1 0 10 * * 6", async () => {
     const lesson = await Lesson.find()
+    await buildWebinarMessage(lesson, "6")
     await buildExamMessage(lesson)
     await buildTheMessageWithConditions(lesson, "6")
 })
@@ -202,9 +203,13 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
 <b>Самурай промахнулся</b>
 <b>Сэппуку выход</b>
         `
-            await bot.sendMessage(msg.chat.id, funnyResponse, {
+            const send = await bot.sendMessage(msg.chat.id, funnyResponse, {
                 parse_mode: "HTML"
             })
+            setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 30000) // 30 секунд до удаления сообщения
         }
     } else {
         await bot.sendMessage(msg.chat.id, "Ничего я не создам, пока я не админ")
@@ -217,83 +222,14 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
  * НАПОМИНАНИЕ: добавить данное описание в инструкцию
  */
 bot.onText(/\/setup_(.+)/, async (msg, arr: any) => {
-    const admins = await  bot.getChatAdministrators(msg.chat.id)
-    let admin = false;
-    for (let i = 0; i < admins.length; i++) {
-        if (admins[i].user.id === msg.from!.id) {
-            admin = true
+    let isBotAdmin: boolean = false;
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
         }
-    }
-    if (admin) {
-        try {
-            const typeAndNumber = arr[1].replace(/\s+/g,' ').trim().split(" ")
-            const lesson = await Lesson.findOne({chatId: msg.chat.id})
-            if (typeAndNumber[0] === "lesson" && typeAndNumber.length === 2) {
-                lesson.lessonNumber = typeAndNumber[1]
-                lesson.save()
-                await bot.sendMessage(msg.chat.id, `Номер следующего занятия изменен на ${typeAndNumber[1]}`)
-            } else if (typeAndNumber[0] === "exam" && typeAndNumber.length === 2) {
-                lesson.examNumber = typeAndNumber[1]
-                lesson.save()
-                await bot.sendMessage(msg.chat.id, `Номер следующей контрольной изменен на ${typeAndNumber[1]}`)
-            } else {
-                await bot.sendMessage(msg.chat.id, "Неверный ввод")
-            }
-        } catch (err) {
-            await bot.sendMessage(msg.chat.id, "Неверный ввод")
-        }
-    } else {
-        const funnyResponse = `
-<b>Править данные</b>
-<b>Сёгунату дано лишь</b>
-<b>Ступай человек</b>
-        `
-        await bot.sendMessage(msg.chat.id, funnyResponse, {
-            parse_mode: "HTML"
-        })
-    }
-})
-
-/**
- * Установка даты последнего занятия, эта дата нужна для определения следующей контрольной, и эта дата сама устанавливается автоматически после оповещения о предстоящем занятии
- * Но этой функцией нужно установить дату Первого занятия новой группы в самом начале только для того, чтобы продемонстрировать группе
- * что можно проверять данные своей группы, с датой следующей контрольной, датами каникул, номеров занятий и контрольных и прочего
- */
-bot.onText(/\/putdate_(.+)/, async (msg, arr: any) => {
-    const admins = await  bot.getChatAdministrators(msg.chat.id)
-    let admin = false;
-    for (let i = 0; i < admins.length; i++) {
-        if (admins[i].user.id === msg.from!.id) {
-            admin = true
-        }
-    }
-    if (admin) {
-        try {
-            const lesson = await Lesson.findOne({chatId: msg.chat.id})
-            lesson.dateOfLastLesson = arr[1]
-            lesson.save()
-            await bot.sendMessage(msg.chat.id, `Дата последнего занятия изменена на ${arr[1]}`)
-        } catch (err) {
-            await bot.sendMessage(msg.chat.id, "Неверный ввод")
-        }
-    } else {
-        const funnyResponse = `
-<b>Числа меняешь</b>
-<b>Урока первого ты</b>
-<b>Лучше не надо</b>
-        `
-        await bot.sendMessage(msg.chat.id, funnyResponse, {
-            parse_mode: "HTML"
-        })
-    }
-})
-
-/**
- * Получение инструкций, команда скрыта, нужно писать ее через / без единой ошибки, если студенты получат к ней доступ, то могут сломать бота
- */
-bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
-    const isPrivate = msg.chat.type === "private"
-    if (!isPrivate) {
+    });
+    if (isBotAdmin) {
         const admins = await bot.getChatAdministrators(msg.chat.id)
         let admin = false;
         for (let i = 0; i < admins.length; i++) {
@@ -303,7 +239,114 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
         }
         if (admin) {
             try {
-                const text: string = ` 
+                const typeAndNumber = arr[1].replace(/\s+/g, ' ').trim().split(" ")
+                const lesson = await Lesson.findOne({chatId: msg.chat.id})
+                if (typeAndNumber[0] === "lesson" && typeAndNumber.length === 2) {
+                    lesson.lessonNumber = typeAndNumber[1]
+                    lesson.save()
+                    await bot.sendMessage(msg.chat.id, `Номер следующего занятия изменен на ${typeAndNumber[1]}`)
+                } else if (typeAndNumber[0] === "exam" && typeAndNumber.length === 2) {
+                    lesson.examNumber = typeAndNumber[1]
+                    lesson.save()
+                    await bot.sendMessage(msg.chat.id, `Номер следующей контрольной изменен на ${typeAndNumber[1]}`)
+                } else {
+                    await bot.sendMessage(msg.chat.id, "Неверный ввод")
+                }
+            } catch (err) {
+                await bot.sendMessage(msg.chat.id, "Неверный ввод")
+            }
+        } else {
+            const funnyResponse = `
+<b>Править данные</b>
+<b>Сёгунату дано лишь</b>
+<b>Ступай человек</b>
+        `
+            const send = await bot.sendMessage(msg.chat.id, funnyResponse, {
+                parse_mode: "HTML"
+            })
+            setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 30000) // 30 секунд до удаления сообщения
+        }
+    } else {
+        await bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")
+    }
+})
+
+/**
+ * Установка даты последнего занятия, эта дата нужна для определения следующей контрольной, и эта дата сама устанавливается автоматически после оповещения о предстоящем занятии
+ * Но этой функцией нужно установить дату Первого занятия новой группы в самом начале только для того, чтобы продемонстрировать группе
+ * что можно проверять данные своей группы, с датой следующей контрольной, датами каникул, номеров занятий и контрольных и прочего
+ */
+bot.onText(/\/putdate_(.+)/, async (msg, arr: any) => {
+    let isBotAdmin: boolean = false;
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
+        }
+    });
+    if (isBotAdmin) {
+        const admins = await bot.getChatAdministrators(msg.chat.id)
+        let admin = false;
+        for (let i = 0; i < admins.length; i++) {
+            if (admins[i].user.id === msg.from!.id) {
+                admin = true
+            }
+        }
+        if (admin) {
+            try {
+                const lesson = await Lesson.findOne({chatId: msg.chat.id})
+                lesson.dateOfLastLesson = arr[1]
+                lesson.save()
+                await bot.sendMessage(msg.chat.id, `Дата последнего занятия изменена на ${arr[1]}`)
+            } catch (err) {
+                await bot.sendMessage(msg.chat.id, "Неверный ввод")
+            }
+        } else {
+            const funnyResponse = `
+<b>Числа меняешь</b>
+<b>Урока первого ты</b>
+<b>Лучше не надо</b>
+        `
+            const send = await bot.sendMessage(msg.chat.id, funnyResponse, {
+                parse_mode: "HTML"
+            })
+            setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 30000) // 30 секунд до удаления сообщения
+        }
+    } else {
+        await bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")
+    }
+})
+
+/**
+ * Получение инструкций, команда скрыта, нужно писать ее через / без единой ошибки, если студенты получат к ней доступ, то могут сломать бота
+ */
+bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
+    let isBotAdmin: boolean = false;
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
+        }
+    });
+    if (isBotAdmin) {
+        const isPrivate = msg.chat.type === "private"
+        if (!isPrivate) {
+            const admins = await bot.getChatAdministrators(msg.chat.id)
+            let admin = false;
+            for (let i = 0; i < admins.length; i++) {
+                if (admins[i].user.id === msg.from!.id) {
+                    admin = true
+                }
+            }
+            if (admin) {
+                try {
+                    const text: string = ` 
         <strong>----------------------------------------------------------------</strong>
         
         <b>Привет дорогой создатель группы!</b>
@@ -356,24 +399,31 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
         
         <strong>----------------------------------------------------------------</strong>
 `
-                await bot.sendMessage(msg.chat.id, text, {
-                    parse_mode: "HTML"
-                })
-            } catch (err) {
-                await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
-            }
-        } else {
-            const funnyResponse = `
+                    await bot.sendMessage(msg.chat.id, text, {
+                        parse_mode: "HTML"
+                    })
+                } catch (err) {
+                    await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
+                }
+            } else {
+                const funnyResponse = `
 <b>Узреть желаешь</b>
 <b>Инструкцию программы</b>
 <b>Пустота кругом</b>
         `
-            await bot.sendMessage(msg.chat.id, funnyResponse, {
-                parse_mode: "HTML"
-            })
+                const send = await bot.sendMessage(msg.chat.id, funnyResponse, {
+                    parse_mode: "HTML"
+                })
+                setTimeout(() => {
+                    bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                    bot.deleteMessage(msg.chat.id, send.message_id.toString())
+                }, 15000) // 15 секунд до удаления сообщения
+            }
+        } else {
+            await bot.sendMessage(msg.chat.id, "Лишь в групповом чате отвечаю я на данную команду")
         }
     } else {
-        await bot.sendMessage(msg.chat.id, "Лишь в групповом чате отвечаю я на данную команду")
+        await bot.sendMessage(msg.chat.id, "Ничего я не покажу, пока я не админ")
     }
 })
 
@@ -424,7 +474,7 @@ bot.onText(/\/show/, async (msg) => {
 
 <b>По времени c </b><pre>${lessonTime[lesson.time]}</pre>
 
-<b>Вебинары по </b><pre>${weekDays[lesson.webinarOne]}  ${lesson.webinarTwo ? " и по " + weekDays[lesson.webinarTwo]: ""}</pre>
+<b>Вебинары по </b><pre>${weekDays[lesson.webinarOne]}  ${weekDays[lesson.webinarTwo] ? " и по " + weekDays[lesson.webinarTwo] : ""}</pre>
 
 <b>Номер следующего занятия </b><pre>#${lesson.lessonNumber}</pre>
 
@@ -490,7 +540,8 @@ bot.onText(/\/allgroups/, async (msg) => {
 
                 if (lesson[i].lessonDayOne === "2") result -= 1
                 dateOfNextSaturday = moment(dt).add(result, "days").format("DD-MM-YYYY")
-
+                console.log("WEEKDAY**** ",weekDays[lesson[i].lessonDayOne])
+                console.log("LESSON*** ",lesson[i].lessonDayOne)
                 const text = `
 
 <strong>--------------------------------------</strong>
@@ -501,11 +552,11 @@ bot.onText(/\/allgroups/, async (msg) => {
 
 <b>Людей в чате без админов </b><pre>${amountWithoutAdmins}</pre>
 
-<b>Учебные дни по </b><pre>${weekDays[lesson.lessonDayOne]} и ${weekDays[lesson.lessonDayTwo]}</pre>
+<b>Учебные дни по </b><pre>${weekDays[lesson[i].lessonDayOne]} и ${weekDays[lesson[i].lessonDayTwo]}</pre>
 
-<b>По времени c </b><pre>${lessonTime[lesson.time]}</pre>
+<b>По времени c </b><pre>${lessonTime[lesson[i].time]}</pre>
 
-<b>Вебинары по </b><pre>${weekDays[lesson.webinarOne]}  ${lesson.webinarTwo ? " и по " + weekDays[lesson.webinarTwo]: ""}</pre>
+<b>Вебинары по </b><pre>${weekDays[lesson[i].webinarOne]}  ${weekDays[lesson[i].webinarTwo] ? " и по " + weekDays[lesson[i].webinarTwo] : ""}</pre>
 
 <b>Номер следующего занятия </b><pre>#${lesson[i].lessonNumber}</pre>
 
