@@ -51,6 +51,23 @@ const bot = new TelegramBot(config.telegramToken, {
         }
     }
 })
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Необходимые переменные
+ */
+const weekDays: any = {
+    "1": "понедельникам",
+    "2": "вторникам",
+    "3": "средам",
+    "4": "четвергам",
+    "5": "пятницам",
+    "6": "субботам",
+    "7": "воскресеньям",
+}
+const lessonTime: any = {
+    "evening": "19:30 до 21:30",
+    "lunch": "16:00 до 18:00"
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -89,6 +106,8 @@ schedule.scheduleJob("1 0 13 * * 2", async () => {
 schedule.scheduleJob("1 0 13 * * 3", async () => {
     const lesson = await Lesson.find()
     await buildWebinarMessage(lesson, "3")
+    dateOnFriday = moment().add(3, "days").format("DD-MM-YYYY")
+    await buildPaymentNotificationMessage(lesson, dateOnFriday)
     dateOfNextSaturday = moment().add(3, "days").format("DD-MM-YYYY")
     await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
     await buildTheMessageWithConditions(lesson, "3")
@@ -98,6 +117,8 @@ schedule.scheduleJob("1 0 13 * * 3", async () => {
  */
 schedule.scheduleJob("1 0 13 * * 4", async () => {
     const lesson = await Lesson.find()
+    dateOnFriday = moment().add(3, "days").format("DD-MM-YYYY")
+    await buildPaymentNotificationMessage(lesson, dateOnFriday)
     dateOfNextSaturday = moment().add(2, "days").format("DD-MM-YYYY")
     await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
     await buildTheMessageWithConditions(lesson, "4")
@@ -297,9 +318,9 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
         <b>Имя группы:</b><pre>Пишите название без пробелов в названии</pre>
         <b>День занятия номер 1:</b><pre>Пишите числом 1 это понедельник, 2 вторник</pre>
         <b>День занятия номер 2:</b><pre>Также числом 4 это четверг, 5 пятница</pre>
-        <b>День вебинара номер 1:</b><pre>Если есть вебинары по вторникам, то ставим 2, по средам 3, иначе пишем null</pre>
-        <b>День вебинара номер 2:</b><pre>Если есть вебинары по пятницам, то ставим 5, иначе пишем null</pre>
-        <b>Время занятий:</b><pre>есть два варианта либо evening либо lunch, вечерняя и дневная группы соответсвенно</pre>
+        <b>День вебинара номер 1:</b><pre>Пишем номер дня, где 1 это понедельник, 2 вторник и тд, иначе пишем null</pre>
+        <b>День вебинара номер 2:</b><pre>Тоже самое, что и для первого дня вебинара, ставим число соответсвенно дня недели, либо просто пишем null</pre>
+        <b>Время занятий:</b><pre>Есть два варианта либо evening либо lunch, вечерняя и дневная группы соответсвенно</pre>
         <b>Дата первых каникул:</b><pre>Укажите дату в формате dd-mm-yyyy (от этой даты считается неделя каникул)</pre>
         <b>Дата вторых каникул:</b><pre>Также укажите дату в формате dd-mm-yyyy</pre>
         <b>Номер текущего следующего занятия:</b><pre>Просто номер укажите числом</pre>
@@ -399,11 +420,11 @@ bot.onText(/\/show/, async (msg) => {
         
 <b>Ваша группа </b><pre>${lesson.groupName}</pre>
 
-<b>Вы учитесь по </b><pre>${lesson.lessonDayOne === "1" ? "понедельникам" : lesson.lessonDayOne === "2" ? "вторникам" : "хрен знает каким дням"} и ${lesson.lessonDayTwo === "4" ? "четвергам" : lesson.lessonDayTwo === "5" ? "пятницам" : "хрен знает каким дням"}</pre>
+<b>Вы учитесь по </b><pre>${weekDays[lesson.lessonDayOne]} и ${weekDays[lesson.lessonDayTwo]}</pre>
 
-<b>По времени c </b><pre>${lesson.time === "evening" ? "19:30 до 21:30" : lesson.time === "lunch" ? "16:00 до 18:00" : "хрен знает сколько до не знаю скольки"}</pre>
+<b>По времени c </b><pre>${lessonTime[lesson.time]}</pre>
 
-<b>Вебинары по </b><pre>${lesson.webinarOne === "3" ? "средам в 19:30" : lesson.webinarOne === "5" ? "пятницам в 19:30" : lesson.webinarOne === "2" ? "вторникам в 19:30" : ""}  ${lesson.webinarTwo === "5" ? "и по пятницам в 19:30" : ""}</pre>
+<b>Вебинары по </b><pre>${weekDays[lesson.webinarOne]}  ${lesson.webinarTwo ? " и по " + weekDays[lesson.webinarTwo]: ""}</pre>
 
 <b>Номер следующего занятия </b><pre>#${lesson.lessonNumber}</pre>
 
@@ -480,11 +501,11 @@ bot.onText(/\/allgroups/, async (msg) => {
 
 <b>Людей в чате без админов </b><pre>${amountWithoutAdmins}</pre>
 
-<b>Учебные дни по </b><pre>${lesson[i].lessonDayOne === "1" ? "понедельникам" : lesson[i].lessonDayOne === "2" ? "вторникам" : "хрен знает каким дням"} и ${lesson[i].lessonDayTwo === "4" ? "четвергам" : lesson[i].lessonDayTwo === "5" ? "пятницам" : "хрен знает каким дням"}</pre>
+<b>Учебные дни по </b><pre>${weekDays[lesson.lessonDayOne]} и ${weekDays[lesson.lessonDayTwo]}</pre>
 
-<b>По времени c </b><pre>${lesson[i].time === "evening" ? "19:30 до 21:30" : lesson[i].time === "lunch" ? "16:00 до 18:00" : "хрен знает сколько до не знаю скольки"}</pre>
+<b>По времени c </b><pre>${lessonTime[lesson.time]}</pre>
 
-<b>Вебинары по </b><pre>${lesson[i].webinarOne === "3" ? "средам в 19:30" : lesson[i].webinarOne === "5" ? "пятницам в 19:30" : lesson[i].webinarOne === "2" ? "вторникам в 19:30" : ""}  ${lesson[i].webinarTwo === "5" ? "и по пятницам в 19:30" : ""}</pre>
+<b>Вебинары по </b><pre>${weekDays[lesson.webinarOne]}  ${lesson.webinarTwo ? " и по " + weekDays[lesson.webinarTwo]: ""}</pre>
 
 <b>Номер следующего занятия </b><pre>#${lesson[i].lessonNumber}</pre>
 
@@ -782,10 +803,14 @@ bot.onText(/\/iamthechampion/, async (msg) => {
  */
 
 /**
- * Функция для составления базового сообщения, как о контрольной (но есть и другие сообщения о контрольной), так и о занятиях
+ * Функция для составления базового сообщения, и вебинарного сообщения (возникла из-за частых переносов дат и времени вебинара), как о контрольной (но есть и другие сообщения о контрольной), так и о занятиях
  */
 async function buildTheMessage(chatId: string, typeOfLesson: string, lessonOrExamNumber: string, time: string, date: string, additionalText: string) {
     const text: string = `Внимание #напоминаем, сегодня (${date}) у вас состоится ${typeOfLesson} номер #${lessonOrExamNumber} в ${time}, ${additionalText}`
+    await bot.sendMessage(chatId, text)
+}
+async function buildTheWebinarMessage(chatId: string, typeOfLesson: string, date: string, additionalText: string) {
+    const text: string = `Внимание #напоминаем, сегодня (${date}) у вас состоится ${typeOfLesson}, ${additionalText}`
     await bot.sendMessage(chatId, text)
 }
 
@@ -823,8 +848,7 @@ async function buildWebinarMessage(lesson: Array<LessonInterface>, day: string) 
             if ((lesson[i].webinarOne === "3" || lesson[i].webinarOne === "2") && lesson[i].lessonNumber % 8 === 1) {
                 continue
             }
-            const fakeNumber = (lesson[i].lessonNumber - 1) + ""
-            await buildTheMessage(lesson[i].chatId, "Вебинар", fakeNumber, "19:30", date, `Пишите вопросы с хэштэгом #Навебинар${fakeNumber}`)
+            await buildTheWebinarMessage(lesson[i].chatId, "Вебинар", date, `Пишите вопросы с хэштэгом #Навебинар`)
         }
     }
 }
