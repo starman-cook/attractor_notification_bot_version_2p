@@ -11,4 +11,5 @@ export interface  LessonInterface {
     lessonNumber: number
     examNumber: number
     dateOfLastLesson: string
+    groupAdmin: string
 }

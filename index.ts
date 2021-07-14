@@ -82,6 +82,10 @@ let dateOnFriday;
  */
 schedule.scheduleJob("1 0 13 * * 1", async () => {
     const lesson = await Lesson.find()
+    await buildEndOfTestPeriodMessage(lesson)
+    await buildCongratulationMessageAfterFirstExam(lesson)
+    await buildMessageAboutDiscountAndDeadlines(lesson)
+    await buildCheatingIsBadMessage(lesson)
     dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
     await buildPaymentNotificationMessage(lesson, dateOnFriday)
     dateOfNextSaturday = moment().add(5, "days").format("DD-MM-YYYY")
@@ -93,6 +97,7 @@ schedule.scheduleJob("1 0 13 * * 1", async () => {
  */
 schedule.scheduleJob("1 0 13 * * 2", async () => {
     const lesson = await Lesson.find()
+    await buildVisitAttractorMessage(lesson)
     await buildWebinarMessage(lesson, "2")
     dateOnFriday = moment().add(3, "days").format("DD-MM-YYYY")
     await buildPaymentNotificationMessage(lesson, dateOnFriday)
@@ -106,7 +111,7 @@ schedule.scheduleJob("1 0 13 * * 2", async () => {
 schedule.scheduleJob("1 0 13 * * 3", async () => {
     const lesson = await Lesson.find()
     await buildWebinarMessage(lesson, "3")
-    dateOnFriday = moment().add(3, "days").format("DD-MM-YYYY")
+    dateOnFriday = moment().add(2, "days").format("DD-MM-YYYY")
     await buildPaymentNotificationMessage(lesson, dateOnFriday)
     dateOfNextSaturday = moment().add(3, "days").format("DD-MM-YYYY")
     await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
@@ -117,7 +122,8 @@ schedule.scheduleJob("1 0 13 * * 3", async () => {
  */
 schedule.scheduleJob("1 0 13 * * 4", async () => {
     const lesson = await Lesson.find()
-    dateOnFriday = moment().add(3, "days").format("DD-MM-YYYY")
+    await buildIndividualLessonsAnnounce(lesson)
+    dateOnFriday = moment().add(1, "days").format("DD-MM-YYYY")
     await buildPaymentNotificationMessage(lesson, dateOnFriday)
     dateOfNextSaturday = moment().add(2, "days").format("DD-MM-YYYY")
     await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
@@ -130,17 +136,22 @@ schedule.scheduleJob("1 0 13 * * 5", async () => {
     const lesson = await Lesson.find()
     await buildWebinarMessage(lesson, "5")
     dateOnFriday = moment().format("DD-MM-YYYY")
-    await buildPaymentNotificationMessage(lesson, dateOnFriday)
     dateOfNextSaturday = moment().add(1, "days").format("DD-MM-YYYY")
     await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
     await buildTheMessageWithConditions(lesson, "5")
+    await buildPaymentNotificationMessage(lesson, dateOnFriday)
+    await buildEndOfTestPeriodFinalLastMessage(lesson)
+})
+
+schedule.scheduleJob("1 0 18 * * 5", async () => {
+    const lesson = await Lesson.find()
+    await buildWishGoodLuckMessageForFirstExam(lesson)
 })
 /**
  * Суббота
  */
 schedule.scheduleJob("1 0 10 * * 6", async () => {
     const lesson = await Lesson.find()
-    await buildWebinarMessage(lesson, "6")
     await buildExamMessage(lesson)
     await buildTheMessageWithConditions(lesson, "6")
 })
@@ -299,7 +310,7 @@ bot.onText(/\/putdate_(.+)/, async (msg, arr: any) => {
             try {
                 const lesson = await Lesson.findOne({chatId: msg.chat.id})
                 lesson.dateOfLastLesson = arr[1]
-                lesson.save()
+                await lesson.save()
                 await bot.sendMessage(msg.chat.id, `Дата последнего занятия изменена на ${arr[1]}`)
             } catch (err) {
                 await bot.sendMessage(msg.chat.id, "Неверный ввод")
@@ -309,6 +320,54 @@ bot.onText(/\/putdate_(.+)/, async (msg, arr: any) => {
 <b>Числа меняешь</b>
 <b>Урока первого ты</b>
 <b>Лучше не надо</b>
+        `
+            const send = await bot.sendMessage(msg.chat.id, funnyResponse, {
+                parse_mode: "HTML"
+            })
+            setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 30000) // 30 секунд до удаления сообщения
+        }
+    } else {
+        await bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")
+    }
+})
+
+/**
+ * Установка имени администратора группы, желательно добавлять с номером контактов и телефона, чтобы было информативнее для студентов
+ * Функция принимает все что написано после нижнего подчеркивания, можно написать что-угодно и это созранится в поле groupAdmin в группе
+ */
+bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
+    let isBotAdmin: boolean = false;
+    const botId: any = await bot.getMe()
+    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        if (c.status == "administrator") {
+            isBotAdmin = true
+        }
+    });
+    if (isBotAdmin) {
+        const admins = await bot.getChatAdministrators(msg.chat.id)
+        let admin = false;
+        for (let i = 0; i < admins.length; i++) {
+            if (admins[i].user.id === msg.from!.id) {
+                admin = true
+            }
+        }
+        if (admin) {
+            try {
+                const lesson = await Lesson.findOne({chatId: msg.chat.id})
+                lesson.groupAdmin = arr[1]
+                await lesson.save()
+                await bot.sendMessage(msg.chat.id, `Админ этой группы ${arr[1]}`)
+            } catch (err) {
+                await bot.sendMessage(msg.chat.id, "Неверный ввод")
+            }
+        } else {
+            const funnyResponse = `
+<b>Админа менять</b>
+<b>Нельзя группы текущей </b>
+<b>Уже решено</b>
         `
             const send = await bot.sendMessage(msg.chat.id, funnyResponse, {
                 parse_mode: "HTML"
@@ -385,7 +444,7 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
         <pre>Напишите команду /putdate_ и сразу без пробела напишите дату для последнего занятия. На ориентации это будет дата первого занятия кстати, так как счет идет с 1, и от этой даты и от этого занятия произойдет расчет даты следующей контрольной!</pre>
         <pre>Дату пишем в формате dd-mm-yyyy</pre>
         <pre>Например, /putdate_20-04-2021 значит, что дата "текущего" занятия 20 апреля 2021 года</pre>
-        <pre>Короче, при создании группы мы же в команде /build_ в конце напишем 1 1 так как следующее занятие 1 и следующая контрольная 1. Так вот ждя вот этого 1 (первого) занятия нужно указать настоящую дату, когда это занятие будет и все)))</pre>
+        <pre>Короче, при создании группы мы же в команде /build_ в конце напишем 1 1 так как следующее занятие 1 и следующая контрольная 1. Так вот для вот этого 1 (первого) занятия нужно указать настоящую дату, когда это занятие будет и все)))</pre>
         
          <b>PPPS:</b>
          <pre>Чтобы посмотреть данные всех групп, введите команду /allgroups в личной переписке с ботом</pre>
@@ -455,10 +514,15 @@ bot.onText(/\/show/, async (msg) => {
                 result = el.value
             }
         })
-        const parts = lesson.dateOfLastLesson.split("-")
-        const dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0])
         if (lesson.lessonDayOne === "2") result -= 1
-        dateOfNextSaturday = moment(dt).add(result, "days").format("DD-MM-YYYY")
+        const nextSaturdaySimpleDate = buildMomentDate(lesson.dateOfLastLesson).add(result, "days")
+        const monthBeforeExam = buildMomentDate(lesson.dateOfLastLesson).add(result, "days").subtract(28, 'days')
+        const holidayOne = buildMomentDate(lesson.holidayOne)
+        const holidayTwo = buildMomentDate(lesson.holidayTwo)
+        if ((holidayOne < nextSaturdaySimpleDate && holidayOne >= monthBeforeExam) || (holidayTwo < nextSaturdaySimpleDate && holidayTwo >= monthBeforeExam)) {
+            result += 7
+        }
+        dateOfNextSaturday = buildMomentDate(lesson.dateOfLastLesson).add(result, "days").format("DD-MM-YYYY")
 
         const text = `
 
@@ -483,6 +547,8 @@ bot.onText(/\/show/, async (msg) => {
 <b>Первые каникулы</b><pre>#${lesson.holidayOne}</pre> 
      
 <b>Вторые каникулы</b><pre>#${lesson.holidayTwo}</pre> 
+
+<b>Админ вашей группы</b><pre>#${lesson.groupAdmin}</pre> 
      
 <strong>--------------------------------------</strong>
  
@@ -535,13 +601,17 @@ bot.onText(/\/allgroups/, async (msg) => {
                         return null
                     }
                 })
-                const parts = lesson[i].dateOfLastLesson.split("-")
-                const dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0])
 
                 if (lesson[i].lessonDayOne === "2") result -= 1
-                dateOfNextSaturday = moment(dt).add(result, "days").format("DD-MM-YYYY")
-                console.log("WEEKDAY**** ",weekDays[lesson[i].lessonDayOne])
-                console.log("LESSON*** ",lesson[i].lessonDayOne)
+                const nextSaturdaySimpleDate = buildMomentDate(lesson[i].dateOfLastLesson).add(result, "days")
+                const monthBeforeExam = buildMomentDate(lesson[i].dateOfLastLesson).add(result, "days").subtract(28, 'days')
+                const holidayOne = buildMomentDate(lesson[i].holidayOne)
+                const holidayTwo = buildMomentDate(lesson[i].holidayTwo)
+                if ((holidayOne < nextSaturdaySimpleDate && holidayOne >= monthBeforeExam) || (holidayTwo < nextSaturdaySimpleDate && holidayTwo >= monthBeforeExam)) {
+                    result += 7
+                }
+                dateOfNextSaturday = buildMomentDate(lesson[i].dateOfLastLesson).add(result, "days").format("DD-MM-YYYY")
+
                 const text = `
 
 <strong>--------------------------------------</strong>
@@ -565,6 +635,8 @@ bot.onText(/\/allgroups/, async (msg) => {
 <b>Первые каникулы</b><pre>#${lesson[i].holidayOne}</pre>
 
 <b>Вторые каникулы</b><pre>#${lesson[i].holidayTwo}</pre>
+
+<b>Админ этой группы</b><pre>#${lesson[i].groupAdmin}</pre> 
 
 <b>ID группы</b><pre>${lesson[i]._id}</pre>
 
@@ -905,6 +977,16 @@ async function buildWebinarMessage(lesson: Array<LessonInterface>, day: string) 
 }
 
 /**
+ * Функция для сообщения о субботнем вебинаре
+ */
+async function buildWebinarSaturdayMessage(lesson: LessonInterface) {
+    const date = moment().format("DD-MM-YYYY")
+    if (lesson.webinarOne === "6" || lesson.webinarTwo === "6") {
+        await buildTheWebinarMessage(lesson.chatId, "Вебинар", date, `Пишите вопросы с хэштэгом #Навебинар`)
+    }
+}
+
+/**
  * Функция для сообщения о контрольной в день контрольной
  */
 async function buildExamMessage(lesson: Array<LessonInterface>) {
@@ -915,11 +997,14 @@ async function buildExamMessage(lesson: Array<LessonInterface>) {
         if ((lesson[i].lessonNumber - 1) % 8 === 0 && lesson[i].lessonNumber >= 8) {
             await buildTheMessage(lesson[i].chatId, "Контрольная", lesson[i].examNumber + "", "11:00", date, `готовьте треккер если вы сдаете онлайн, включайте зум, приготовьте ручку и бумагу, лишними не будут))`)
             lesson[i].examNumber += 1
+        } else {
+            await buildWebinarSaturdayMessage(lesson[i])
         }
         // @ts-ignore
         lesson[i].save()
     }
 }
+
 
 /**
  * Функция для сообщения о контролльной в течение недели до контрольной с указанием даты контрольной
@@ -949,13 +1034,253 @@ async function buildPaymentNotificationMessage(lesson: Array<LessonInterface>, d
             const text = `Всем привет, #напоминаем об оплате за ${months[lesson[i].examNumber - 1]} учебный месяц. Сегодня - ${date}, крайний день внесения  оплаты.`
             await bot.sendMessage(lesson[i].chatId, text)
         }
-        else if (lesson[i].lessonNumber % 8 === 1 && lesson[i].lessonNumber > 8) {
+        else if ((lesson[i].lessonNumber % 8 === 1 || lesson[i].lessonNumber % 8 === 2) && lesson[i].lessonNumber > 8) {
             const text = `Всем привет, напоминаем об оплате за текущий месяц, дедлайн до пятницы (${date})`
             await bot.sendMessage(lesson[i].chatId, text)
         }
     }
 }
 
+/**
+ * Функция для информирования о посещении школы
+ */
+async function buildVisitAttractorMessage(lesson: Array<LessonInterface>) {
+    for (let i = 0; i < lesson.length; i++) {
+        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
+        if (holiday) continue
+        if (lesson[i].lessonNumber === 1 || lesson[i].lessonNumber === 2) {
+            const text = `
+
+<b>#Важнаяинформация</b> 
+
+Уважаемые студенты!
+
+Образовательный центр Аттрактор Скул всегда рад видеть каждого из вас в нашем офисе. Вы можете приходить к нам для самостоятельной работы для выполнения домашних заданий. Мы работаем с Понедельника по Пятницу с 13-00 до 22-00, независимо от государственных, религиозных и прочих нерабочих праздничных дней.
+
+Школа отдыхает два раза в год - летние каникулы и новогодние каникулы (расписание есть у вас в файле Ориентация).
+
+Желаем всем вам успехов в учебе! 🤓
+
+            `
+            await bot.sendMessage(lesson[i].chatId, text, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
+
+/**
+ * Функция для информирования об индивидуальных занятиях
+ */
+async function buildIndividualLessonsAnnounce(lesson: Array<LessonInterface>) {
+    for (let i = 0; i < lesson.length; i++) {
+        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
+        if (holiday) continue
+        if (lesson[i].lessonNumber === 2) {
+            const text = `
+
+<b>#Важноеобъявление</b>
+
+Добрый день, уважаемые студенты!
+Напоминаем вам о том, что у вас есть индивидуальные и дополнительные занятия, которые вы можете использовать в любое рабочее время с Понедельника по Пятницу с 13-00 до 22-00. 
+
+Индивидуальные занятия вы можете использовать только оффлайн.
+Цель занятия помочь вам справиться с пройденной темой на основании подготовленных вами вопросов, которые возникли при выполнении домашнего задания. Под индивидуальным занятием оффлайн подразумевается работа с дежурным преподавателем в аудитории. С преподавателем может работать от 1-го и более студентов одновременно.
+
+Дополнительные занятия вы можете использовать онлайн или оффлайн. Стоимость 1-го часа занятия - 3 000 тг. 
+Под дополнительным занятием онлайн подразумевается разговор с преподавателем по видеосвязи, а занятие оффлайн проводится в аудитории. Цель дополнительного занятия помочь вам справиться с пройденной темой. Эти занятия проводятся по вашим вопросам, возникшим при выполнении домашнего задания. Дополнительное занятие не предусматривает объяснение темы урока заново, а только ответы на ваши вопросы и разбор сложных моментов при выполнении домашней работы. 
+
+📌К занятию важно подготовить вопросы и/или ваши собственные варианты решения этих вопросов, которые вы применили, а они не сработали. Преподаватель направит вас на верный путь решения и вы на будущее поймете, в каком направлении вам двигаться;
+📌 Одно дополнительное занятие продолжается не более одного часа в день, можно заниматься не более двух часов с перерывом минимум на час. 
+
+
+‼️Если вы забыли о дополнительном занятии или опаздываете, то имейте ввиду, что преподаватель ждет вас не более 15-ти минут и если по истечении этого времени вы так и не появились, то преподаватель имеет полное право не выходить на связь, а ваше занятие будет считаться проведенным.
+
+
+Перед посещением офиса вам нужно ознакомиться с правилами посещения центра и строго им следовать: 
+https://docs.google.com/document/d/1UGUCYyg6RZh4WGBn7pncMyrOrfGrzQT_-LMFTvfXWKk/edit?usp=sharing 
+
+При усилении карантинных мер в городе Алматы, мы будем вынуждены закрыть индивидуальные занятия в офисе.
+
+
+Мы надеемся, что данные занятия помогут вам подтянуть знания, и учебный процесс пойдет более продуктивно.
+
+Желаем Вам успехов!
+
+
+            `
+            await bot.sendMessage(lesson[i].chatId, text, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
+
+/**
+ * Функция для информирования об окончании тестогого периода
+ */
+async function buildEndOfTestPeriodMessage(lesson: Array<LessonInterface>) {
+    for (let i = 0; i < lesson.length; i++) {
+        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
+        if (holiday) continue
+        if (lesson[i].lessonNumber === 3) {
+            const text = `
+            
+<b>#Важноеобъявление</b> 
+Уважаемые студенты!
+
+Мы очень надеемся, что вам понравился наш формат обучения и вы твердо решили для себя, стать Рембо-разработчиками 😎
+Напоминаем вам, что в эту пятницу, у вас заканчивается тестовый период и вам важно определить для себя, продолжаете ли вы учиться ☝🏻
+
+Мы будем рады сотрудничеству с вами, и приглашаем вас в удивительный мир программирования. 
+Мы подскажем вам как преодолеть все преграды, на пути к вашей цели!
+
+Чтобы войти в нашу команду, важно до вечера пятницы до 18-00 внести доплату за первый учебный месяц. Оплату можно произвести через :
+1. Через приложение Каспи банк - самый удобный вариант;
+2. Через приложение Халык Банк;
+3. Наличными в офисе;
+4. Через мобильный платежный терминал Альфа pay в нашем офисе.
+
+
+Важно❗️ 
+После оплаты, пожалуйста, скиньте квитанцию об оплате ${config.accountant} , т.к. мы увидим вашу оплату в нашей выписке только на следующий рабочий день.
+
+В пятницу после 18-00 мы отключаем доступ ребятам кто решил не продолжать обучение. О своем решении приостановить обучение как можно раньше напишите пожалуйста в личку Администратору вашей группы ${lesson[i].groupAdmin}.
+
+Все вопросы, касающиеся остатков по оплате, способах оплаты и прочие вопросы, не касающиеся программирования, задавайте в личку ${config.accountant}.
+
+            `
+            await bot.sendMessage(lesson[i].chatId, text, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
+
+/**
+ * Функция для напоминания об оплате, отрабатывает после первого первого занятия после контрольной
+ * И для сообщения о дедлайне оплвты, отрабатывает в пятницу следующей недели после контрольной, не отрабатывает во время каникул
+ */
+async function buildEndOfTestPeriodFinalLastMessage(lesson: Array<LessonInterface>) {
+    for (let i = 0; i < lesson.length; i++) {
+        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
+        if (holiday) continue
+        if (lesson[i].lessonNumber === 5) {
+            const text = `
+
+<b>#Важноеобъявление</b> 
+            
+Сегодня после 18-00 мы отключаем доступ ребятам кто решил не продолжать обучение. 
+Все вопросы, касающиеся остатков по оплате, способах оплаты и прочие вопросы, не касающиеся программирования, задавайте в личку ${config.accountant}.
+
+            `
+            await bot.sendMessage(lesson[i].chatId, text, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
+
+/**
+ * Функция для информирования о важности сдавать домашки в срок и что скидку получают те, кто набирает свыше 95 баллов
+ */
+async function buildMessageAboutDiscountAndDeadlines(lesson: Array<LessonInterface>) {
+    for (let i = 0; i < lesson.length; i++) {
+        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
+        if (holiday) continue
+        if (lesson[i].lessonNumber === 5) {
+            const text = `
+            
+<b>#Напоминаем</b>
+Пожалуйста, 📣обязательно📣 делайте и сдавайте в срок домашние задания (ДЗ) , т.к ваша итоговая оценка за месяц формируется из 40% от оценок за ДЗ + 50% от оценки за контрольную + 10% от посещаемости. 
+Не забывайте о скидке 🤩 за отличную учебу вы получите в том случае, когда ваша итоговая оценка - "отлично" более 95 баллов.
+
+
+            `
+            await bot.sendMessage(lesson[i].chatId, text, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
+
+/**
+ * Функция для пожелания удачи перед первой контрольной
+ */
+async function buildWishGoodLuckMessageForFirstExam(lesson: Array<LessonInterface>) {
+    for (let i = 0; i < lesson.length; i++) {
+        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
+        if (holiday) continue
+        if (lesson[i].lessonNumber === 8 || lesson[i].lessonNumber === 9) {
+            const text = `
+<b>Уважаемые студенты!</b>
+Хотим пожелать вам успеха на завтрашней контрольной! Вы справитесь!
+
+Обращаем ваше внимание на то, что на контрольную у вас выделяется строго определенное время с 11-00 до 19-00, то есть 8 часов. 
+В 19-00 вы должны сдать вашу работу, вне зависимости от того, закончили вы проект или нет. Работы сданные после дедлайна будут штрафоваться существенным снижением баллов.
+
+            `
+            await bot.sendMessage(lesson[i].chatId, text, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
+
+/**
+ * Функция для поздравлений после первой контрольной
+ */
+async function buildCongratulationMessageAfterFirstExam(lesson: Array<LessonInterface>) {
+    for (let i = 0; i < lesson.length; i++) {
+        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
+        if (holiday) continue
+        if (lesson[i].lessonNumber === 9) {
+            const text = `
+<b>#Объявление</b>
+Всем привет!
+В прошедшую субботу вы написали свою первую контрольную, даже не верится, что уже прошел целый месяц вашего продуктивного и насыщенного обучения.
+Вы большие молодцы, и мы надеемся, что вы все хорошо справились☺️
+
+            `
+            await bot.sendMessage(lesson[i].chatId, text, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
+
+/**
+ * Функция напоминание об академической честности
+ */
+async function buildCheatingIsBadMessage(lesson: Array<LessonInterface>) {
+    for (let i = 0; i < lesson.length; i++) {
+        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
+        if (holiday) continue
+        if (lesson[i].lessonNumber === 9 || lesson[i].lessonNumber === 17) {
+            const text = `
+<b>#Важнаяинформация 😌</b>
+
+🚨Напоминаем вам про Академическую честность
+Мы очень серьезно относимся к академической честности и для нас списывание - это страшный грех❗️
+
+У преподавателя есть полное право заподозрить студента в списывании и поставить 0 баллов. Также преподаватель обязательно сообщает об этом факте администрации, и студент может быть отчислен даже за единственный прецедент без права восстановления‼️
+
+♦️ Если вы списали домашку / контрольную с Интернета - 0 баллов.
+
+♦️ Если одинаковый код обнаруживается у двух студентов - оба получают одинаковое наказание - 0 баллов.
+
+Тот кто списал, в будущем столкнувшись с задачей, не сможет самостоятельно ее решить.
+Тот кто дал списать не сделал добро, он лишил возможности научиться  решать задачи своему коллеге. 
+
+ Это нечестно по отношению к центру и остальным студентам, это формирует непрофессиональное поведение и мешает вам стать востребованным разработчиком в будущем.
+
+            `
+            await bot.sendMessage(lesson[i].chatId, text, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -967,10 +1292,21 @@ function isHoliday(dateOne: string, dateTwo: string) {
     let checkDateOne = moment(dateOne, "DD-MM-YYYY")
     let checkDateTwo = moment(dateTwo, "DD-MM-YYYY")
     for (let i = 0; i < 7; i++) {
-        if (checkDateOne.add(i, "days").format("DD-MM-YYYY") === moment().format("DD-MM-YYYY") ||
-            checkDateTwo.add(i, "days").format("DD-MM-YYYY") === moment().format("DD-MM-YYYY")) {
+        const firstChance = checkDateOne.add(i, "days").format("DD-MM-YYYY")
+        const secondChance = checkDateTwo.add(i, "days").format("DD-MM-YYYY")
+        if (firstChance === moment().format("DD-MM-YYYY") ||
+            secondChance === moment().format("DD-MM-YYYY")) {
             return true
         }
     }
     return false
+}
+
+/**
+ * Функция для составления даты под moment
+ */
+function buildMomentDate(date: string) {
+    const parts = date.split("-")
+    const dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0])
+    return moment(dt)
 }
