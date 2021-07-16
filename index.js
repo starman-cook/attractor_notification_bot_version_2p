@@ -1792,15 +1792,11 @@ function buildCheatingIsBadMessage(lesson) {
  * Важно помнить, что если не поставить эту проверку в оповещение об оплате, то есть риск, что во время каникул людей будут дергать сообщениями об оплате
  */
 function isHoliday(dateOne, dateTwo) {
-    var checkDateOne = moment_1.default(dateOne, "DD-MM-YYYY");
-    var checkDateTwo = moment_1.default(dateTwo, "DD-MM-YYYY");
-    for (var i = 0; i < 7; i++) {
-        var firstChance = checkDateOne.add(i, "days").format("DD-MM-YYYY");
-        var secondChance = checkDateTwo.add(i, "days").format("DD-MM-YYYY");
-        if (firstChance === moment_1.default().format("DD-MM-YYYY") ||
-            secondChance === moment_1.default().format("DD-MM-YYYY")) {
-            return true;
-        }
+    var today = moment_1.default();
+    var checkDateOne = buildMomentDate(dateOne);
+    var checkDateTwo = buildMomentDate(dateTwo);
+    if ((today > checkDateOne && today < checkDateOne.add(6, "days")) || (today > checkDateTwo && today < checkDateTwo.add(6, "days"))) {
+        return true;
     }
     return false;
 }

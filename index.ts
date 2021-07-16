@@ -1289,15 +1289,11 @@ async function buildCheatingIsBadMessage(lesson: Array<LessonInterface>) {
  * Важно помнить, что если не поставить эту проверку в оповещение об оплате, то есть риск, что во время каникул людей будут дергать сообщениями об оплате
  */
 function isHoliday(dateOne: string, dateTwo: string) {
-    let checkDateOne = moment(dateOne, "DD-MM-YYYY")
-    let checkDateTwo = moment(dateTwo, "DD-MM-YYYY")
-    for (let i = 0; i < 7; i++) {
-        const firstChance = checkDateOne.add(i, "days").format("DD-MM-YYYY")
-        const secondChance = checkDateTwo.add(i, "days").format("DD-MM-YYYY")
-        if (firstChance === moment().format("DD-MM-YYYY") ||
-            secondChance === moment().format("DD-MM-YYYY")) {
-            return true
-        }
+    const today = moment()
+    let checkDateOne = buildMomentDate(dateOne)
+    let checkDateTwo = buildMomentDate(dateTwo)
+    if ((today > checkDateOne && today < checkDateOne.add(6, "days")) || (today > checkDateTwo && today < checkDateTwo.add(6, "days"))) {
+        return true
     }
     return false
 }
