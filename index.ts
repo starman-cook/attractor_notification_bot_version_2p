@@ -3,15 +3,20 @@ import TelegramBot from 'node-telegram-bot-api'
 import cors from "cors"
 import mongoose from 'mongoose'
 import {config} from "./app/config";
-import {Lesson} from "./app/models/lesson_model";
+import {Group} from "./app/models/group_model";
 import schedule from 'node-schedule'
 import moment from 'moment'
-import {LessonInterface} from './app/interfaces/lesson_interface'
+import {GroupInterface} from './app/interfaces/group_interface'
 
 
 /**
- 8. Создать функционал логирования ошибок работы бота
- 9. Реализовать функционал отправки логов ошибок по расписанию *****
+ СДЕЛАНО 1) TODO В SHOW И ALLGROUPS Отлов каникул и учет если каникулы то дата контрольной плюс 7 дней
+ СДЕЛАНО 2) TODO Активировать и деактивировать группы если каникулы
+ СДЕЛАНО 3) TODO Каждый понедельник в начале дня прибавлять недели счетчик +1
+ СДЕЛАНО 4) TODO Удаление групп
+ СДЕЛАНО 5) TODO Базовые сообщения от админимстрации
+ СДЕЛАНО 6) TODO Инструкцию написать
+ 7) TODO Подумать может еще что добавить...
  */
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -51,23 +56,7 @@ const bot = new TelegramBot(config.telegramToken, {
         }
     }
 })
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/**
- * Необходимые переменные
- */
-const weekDays: any = {
-    "1": "понедельникам",
-    "2": "вторникам",
-    "3": "средам",
-    "4": "четвергам",
-    "5": "пятницам",
-    "6": "субботам",
-    "7": "воскресеньям",
-}
-const lessonTime: any = {
-    "evening": "19:30 до 21:30",
-    "lunch": "16:00 до 18:00"
-}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -81,79 +70,92 @@ let dateOnFriday;
  * Понедельник
  */
 schedule.scheduleJob("1 0 13 * * 1", async () => {
-    const lesson = await Lesson.find()
-    await buildEndOfTestPeriodMessage(lesson)
-    await buildCongratulationMessageAfterFirstExam(lesson)
-    await buildMessageAboutDiscountAndDeadlines(lesson)
-    await buildCheatingIsBadMessage(lesson)
+    const groups = await Group.find()
     dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
-    await buildPaymentNotificationMessage(lesson, dateOnFriday)
     dateOfNextSaturday = moment().add(5, "days").format("DD-MM-YYYY")
-    await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
-    await buildTheMessageWithConditions(lesson, "1")
+    await buildLessonMessage(groups, 1)
+    await buildWebinarMessage(groups, 1)
+    await buildComingExamMessage(groups, dateOfNextSaturday)
+    await buildPaySoonMessage(groups, dateOnFriday)
+    await buildEndOfTestPeriodMessage(groups)
+    await buildMessageAboutDiscountAndDeadlines(groups)
+    await buildCongratulationMessageAfterFirstExam(groups)
+    await buildCheatingIsBadMessage(groups)
+
 })
+
+// Здесь идет прибаление недель, в самом начале понедельника, в 00:00 00минут 01 секунд и проверка на каникулы, если каникулы, то группа деактивируется и все
+schedule.scheduleJob("1 0 0 * * 1", async () => {
+    const groups = await Group.find()
+    await incrementWeek(groups)
+    for (let i = 0; i < groups.length; i++) {
+        await isHoliday(groups[i])
+    }
+})
+
 /**
  * Вторник
  */
 schedule.scheduleJob("1 0 13 * * 2", async () => {
-    const lesson = await Lesson.find()
-    await buildVisitAttractorMessage(lesson)
-    await buildWebinarMessage(lesson, "2")
-    dateOnFriday = moment().add(3, "days").format("DD-MM-YYYY")
-    await buildPaymentNotificationMessage(lesson, dateOnFriday)
+    const groups = await Group.find()
+    dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(4, "days").format("DD-MM-YYYY")
-    await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
-    await buildTheMessageWithConditions(lesson, "2")
+    await buildLessonMessage(groups, 2)
+    await buildWebinarMessage(groups, 2)
+    await buildComingExamMessage(groups, dateOfNextSaturday)
+    await buildPaySoonMessage(groups, dateOnFriday)
+    await buildVisitAttractorMessage(groups)
 })
 /**
  * Среда
  */
 schedule.scheduleJob("1 0 13 * * 3", async () => {
-    const lesson = await Lesson.find()
-    await buildWebinarMessage(lesson, "3")
-    dateOnFriday = moment().add(2, "days").format("DD-MM-YYYY")
-    await buildPaymentNotificationMessage(lesson, dateOnFriday)
+    const groups = await Group.find()
+    dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(3, "days").format("DD-MM-YYYY")
-    await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
-    await buildTheMessageWithConditions(lesson, "3")
+    await buildLessonMessage(groups, 3)
+    await buildWebinarMessage(groups, 3)
+    await buildComingExamMessage(groups, dateOfNextSaturday)
+    await buildPaySoonMessage(groups, dateOnFriday)
 })
 /**
  * Четверг
  */
 schedule.scheduleJob("1 0 13 * * 4", async () => {
-    const lesson = await Lesson.find()
-    await buildIndividualLessonsAnnounce(lesson)
-    dateOnFriday = moment().add(1, "days").format("DD-MM-YYYY")
-    await buildPaymentNotificationMessage(lesson, dateOnFriday)
+    const groups = await Group.find()
+    dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(2, "days").format("DD-MM-YYYY")
-    await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
-    await buildTheMessageWithConditions(lesson, "4")
+    await buildLessonMessage(groups, 4)
+    await buildWebinarMessage(groups, 4)
+    await buildComingExamMessage(groups, dateOfNextSaturday)
+    await buildPaySoonMessage(groups, dateOnFriday)
+    await buildIndividualLessonsAnnounce(groups)
 })
 /**
  * Пятница
  */
 schedule.scheduleJob("1 0 13 * * 5", async () => {
-    const lesson = await Lesson.find()
-    await buildWebinarMessage(lesson, "5")
-    dateOnFriday = moment().format("DD-MM-YYYY")
+    const groups = await Group.find()
     dateOfNextSaturday = moment().add(1, "days").format("DD-MM-YYYY")
-    await buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)
-    await buildTheMessageWithConditions(lesson, "5")
-    await buildPaymentNotificationMessage(lesson, dateOnFriday)
-    await buildEndOfTestPeriodFinalLastMessage(lesson)
+    await buildLessonMessage(groups, 5)
+    await buildWebinarMessage(groups, 5)
+    await buildComingExamMessage(groups, dateOfNextSaturday)
+    await buildPayTodayMessage(groups)
+    await buildEndOfTestPeriodFinalLastMessage(groups)
 })
 
 schedule.scheduleJob("1 0 18 * * 5", async () => {
-    const lesson = await Lesson.find()
-    await buildWishGoodLuckMessageForFirstExam(lesson)
+    const groups = await Group.find()
+    await buildWishGoodLuckMessageForFirstExam(groups)
 })
 /**
  * Суббота
  */
 schedule.scheduleJob("1 0 10 * * 6", async () => {
-    const lesson = await Lesson.find()
-    await buildExamMessage(lesson)
-    await buildTheMessageWithConditions(lesson, "6")
+    const groups = await Group.find()
+    await buildLessonMessage(groups, 6)
+    await buildWebinarMessage(groups, 6)
+    await buildTodayExamMessage(groups)
 })
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -179,26 +181,46 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
         }
         if (admin) {
             try {
-
-                const ii = arr[1].replace(/\s+/g,' ').trim().split(" ")
-                const oldLesson = await Lesson.findOne({chatId: msg.chat.id})
-                if (oldLesson) {
-                    oldLesson.delete()
+                const oldGroup = await Group.findOne({chatId: msg.chat.id})
+                if (oldGroup) {
+                    oldGroup.delete()
                 }
-                const lesson = await new Lesson({
+                const ii = arr[1].replace(/\s+/g,' ').trim().split(" ")
+                // 2-19:30/5-19:30
+                const lessons = ii[1].split('/')
+                for (let i = 0; i < lessons.length; i++) {
+                    lessons[i] = {[lessons[i].split("-")[0]]: lessons[i].split("-")[1]}
+                }
+                const webinars = ii[2].split('/')
+                for (let i = 0; i < webinars.length; i++) {
+                    webinars[i] = {[webinars[i].split("-")[0]]: webinars[i].split("-")[1]}
+                }
+                const holidays = ii[3].split('/')
+                const holidayWeeksNumbers = []
+                for (let i = 0; i < holidays.length; i++) {
+                    // @ts-ignore
+                    const currentMonday = moment().startOf('isoweek')
+                    const momentDateHoliday = buildMomentDate(holidays[i])
+                    for (let j = 1; j < 78; j++) {
+                        if (currentMonday.add(7, "days").format("DD-MM-YYYY") === momentDateHoliday.format("DD-MM-YYYY")) {
+                            holidayWeeksNumbers.push(j + parseInt(ii[4]))
+                            break;
+                        }
+                    }
+                }
+
+                const group = await new Group({
                     chatId: msg.chat.id,
                     groupName: ii[0],
-                    lessonDayOne: ii[1],
-                    lessonDayTwo: ii[2],
-                    webinarOne: ii[3],
-                    webinarTwo: ii[4],
-                    time: ii[5],
-                    holidayOne: ii[6], // DateTime format DD-MM-YYYY
-                    holidayTwo: ii[7], // DateTime format DD-MM-YYYY
-                    lessonNumber: parseInt(ii[8]),
-                    examNumber: ii[9]
+                    currentWeek: ii[4] - 1,
+                    lessons: lessons,
+                    webinars: webinars,
+                    holidays: holidays,
+                    holidayWeeksNumbers: holidayWeeksNumbers
                 })
-                lesson.save()
+
+
+                await group.save()
                 const send = await bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")
 
                 setTimeout(() => {
@@ -229,10 +251,9 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
 })
 
 /**
- * Внесение изменений в нумерацию, можно поменять номер следующего занятия и следующей контрольной
- * НАПОМИНАНИЕ: добавить данное описание в инструкцию
+ * Внесение изменений в нумерацию тущей недели
  */
-bot.onText(/\/setup_(.+)/, async (msg, arr: any) => {
+bot.onText(/\/setweek_(.+)/, async (msg, arr: any) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
@@ -250,19 +271,31 @@ bot.onText(/\/setup_(.+)/, async (msg, arr: any) => {
         }
         if (admin) {
             try {
-                const typeAndNumber = arr[1].replace(/\s+/g, ' ').trim().split(" ")
-                const lesson = await Lesson.findOne({chatId: msg.chat.id})
-                if (typeAndNumber[0] === "lesson" && typeAndNumber.length === 2) {
-                    lesson.lessonNumber = typeAndNumber[1]
-                    lesson.save()
-                    await bot.sendMessage(msg.chat.id, `Номер следующего занятия изменен на ${typeAndNumber[1]}`)
-                } else if (typeAndNumber[0] === "exam" && typeAndNumber.length === 2) {
-                    lesson.examNumber = typeAndNumber[1]
-                    lesson.save()
-                    await bot.sendMessage(msg.chat.id, `Номер следующей контрольной изменен на ${typeAndNumber[1]}`)
-                } else {
-                    await bot.sendMessage(msg.chat.id, "Неверный ввод")
+                const group = await Group.findOne({chatId: msg.chat.id})
+                const holidays = group.holidays
+                const holidayWeeksNumbers = []
+                for (let i = 0; i < holidays.length; i++) {
+                    // @ts-ignore
+                    const currentMonday = moment().startOf('isoweek')
+                    const momentDateHoliday = buildMomentDate(holidays[i])
+                    for (let j = 1; j < 78; j++) {
+                        if (currentMonday.add(7, "days").format("DD-MM-YYYY") === momentDateHoliday.format("DD-MM-YYYY")) {
+                            holidayWeeksNumbers.push(j + parseInt(arr[1]))
+                            break;
+                        }
+                    }
                 }
+                group.currentWeek = arr[1]
+                group.holidayWeeksNumbers = holidayWeeksNumbers
+                await group.save()
+                const send = await bot.sendMessage(msg.chat.id, `Номер текущей недели изменен на ${arr[1]}, сообщение удалится через 10 секунд`)
+
+                setTimeout(() => {
+                    bot.deleteMessage(msg.chat.id, send.message_id.toString())
+                    bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                }, 10000)
+
+
             } catch (err) {
                 await bot.sendMessage(msg.chat.id, "Неверный ввод")
             }
@@ -285,54 +318,6 @@ bot.onText(/\/setup_(.+)/, async (msg, arr: any) => {
     }
 })
 
-/**
- * Установка даты последнего занятия, эта дата нужна для определения следующей контрольной, и эта дата сама устанавливается автоматически после оповещения о предстоящем занятии
- * Но этой функцией нужно установить дату Первого занятия новой группы в самом начале только для того, чтобы продемонстрировать группе
- * что можно проверять данные своей группы, с датой следующей контрольной, датами каникул, номеров занятий и контрольных и прочего
- */
-bot.onText(/\/putdate_(.+)/, async (msg, arr: any) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
-    if (isBotAdmin) {
-        const admins = await bot.getChatAdministrators(msg.chat.id)
-        let admin = false;
-        for (let i = 0; i < admins.length; i++) {
-            if (admins[i].user.id === msg.from!.id) {
-                admin = true
-            }
-        }
-        if (admin) {
-            try {
-                const lesson = await Lesson.findOne({chatId: msg.chat.id})
-                lesson.dateOfLastLesson = arr[1]
-                await lesson.save()
-                await bot.sendMessage(msg.chat.id, `Дата последнего занятия изменена на ${arr[1]}`)
-            } catch (err) {
-                await bot.sendMessage(msg.chat.id, "Неверный ввод")
-            }
-        } else {
-            const funnyResponse = `
-<b>Числа меняешь</b>
-<b>Урока первого ты</b>
-<b>Лучше не надо</b>
-        `
-            const send = await bot.sendMessage(msg.chat.id, funnyResponse, {
-                parse_mode: "HTML"
-            })
-            setTimeout(() => {
-                bot.deleteMessage(msg.chat.id, msg.message_id.toString())
-                bot.deleteMessage(msg.chat.id, send.message_id.toString())
-            }, 30000) // 30 секунд до удаления сообщения
-        }
-    } else {
-        await bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")
-    }
-})
 
 /**
  * Установка имени администратора группы, желательно добавлять с номером контактов и телефона, чтобы было информативнее для студентов
@@ -356,10 +341,16 @@ bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
         }
         if (admin) {
             try {
-                const lesson = await Lesson.findOne({chatId: msg.chat.id})
-                lesson.groupAdmin = arr[1]
-                await lesson.save()
-                await bot.sendMessage(msg.chat.id, `Админ этой группы ${arr[1]}`)
+                const group = await Group.findOne({chatId: msg.chat.id})
+                group.groupAdmin = arr[1]
+                await group.save()
+                const send = await bot.sendMessage(msg.chat.id, `Админ этой группы ${arr[1]}, сообщение удалится через 10 секунд`)
+
+                setTimeout(() => {
+                    bot.deleteMessage(msg.chat.id, send.message_id.toString())
+                    bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                }, 10000)
+
             } catch (err) {
                 await bot.sendMessage(msg.chat.id, "Неверный ввод")
             }
@@ -405,64 +396,52 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
             }
             if (admin) {
                 try {
-                    const text: string = ` 
-        <strong>----------------------------------------------------------------</strong>
+                    const text: string = `
+                     <strong>----------------------------------------------------------------</strong>
         
         <b>Привет дорогой создатель группы!</b>
 
         
         <pre>Это инструкция по созданию группы для оповещения студентов о занятиях, контрольных, оплатах и каникулах</pre>
-        <pre>Все что нужно сделать это ввести <b>/build_</b> затем не ставя пробел ввести первый параметр, и затем уже через пробелы все остальные пармаетры.</pre>
-        <pre>Всего параметров 9 штук. Но не пугайтесь, вы всегда можете проверить данные вашей группы и перезаписать ее; то есть при повторении команды <b>/build_</b> со всеми парметрами удалит старую запись и создаст новую</pre>
+        <pre>Все что нужно сделать это ввести <b>/build_</b> затем не ставя пробел ввести первый параметр, и затем уже через пробелы все остальные параметры.</pre>
+        <pre>Чтобы смотреть данные по группе можно ввести <b>/show</b> в чате группы и посмотреть что к чему.</pre>
+        <pre>Всего параметров 5 штук. Но не пугайтесь, вы всегда можете проверить данные вашей группы и перезаписать ее; то есть при повторении команды <b>/build_</b> со всеми парметрами удалит старую запись и создаст новую</pre>
         
         <b>Какие есть параметры:</b>
         
-        <b>Имя группы:</b><pre>Пишите название без пробелов в названии</pre>
-        <b>День занятия номер 1:</b><pre>Пишите числом 1 это понедельник, 2 вторник</pre>
-        <b>День занятия номер 2:</b><pre>Также числом 4 это четверг, 5 пятница</pre>
-        <b>День вебинара номер 1:</b><pre>Пишем номер дня, где 1 это понедельник, 2 вторник и тд, иначе пишем null</pre>
-        <b>День вебинара номер 2:</b><pre>Тоже самое, что и для первого дня вебинара, ставим число соответсвенно дня недели, либо просто пишем null</pre>
-        <b>Время занятий:</b><pre>Есть два варианта либо evening либо lunch, вечерняя и дневная группы соответсвенно</pre>
-        <b>Дата первых каникул:</b><pre>Укажите дату в формате dd-mm-yyyy (от этой даты считается неделя каникул)</pre>
-        <b>Дата вторых каникул:</b><pre>Также укажите дату в формате dd-mm-yyyy</pre>
-        <b>Номер текущего следующего занятия:</b><pre>Просто номер укажите числом</pre>
-        <b>Номер следующей контрольной:</b><pre>Также просто номер числом укажите</pre>
+        <b>Имя группы:</b><pre>Пишите имя без пробелов в названии</pre>
+        <b>Дни и время занятий:</b><pre>Пишите числом день недели, где 1 это понедельник, затем тире (-) и пишите время занятий в любом формате без пробела, далее слэш (/) и другой день занятий и время, так сколько угодно дней</pre>
+        <b>Дни и время вебинаров:</b><pre>Тоже самое, что и для занятий, точно также пишите дни и время через тире (-) и слэши (/)</pre>
+        <b>Даты каникул:</b><pre>Пишите в формате dd-mm-yyyy и ставьте слэш (/) между датами, дат каникул может быть сколько угодно</pre>
+        <b>Номер текущей недели:</b><pre>Если вы заранее создаете группу, то укажите 0, чтобы с понедельника началась первая неделя учебы))</pre>
         
-        <b>Например мы создаем группу JS-5 с занятиями по понедельникам и четвергам, вебинарами только по средам, учебой в дневное время, каникулами на новый год и неделей в августе (15 числа), с самым первым занятием и первой предстоящей контрольной:</b>
-        <pre>/build_JS-5 1 4 3 null lunch 27-12-2020 15-08-2021 1 1</pre>
+        <b>Например мы создаем группу JS-5 с занятиями по понедельникам в 16:00 и четвергам в 19:30, вебинарами по вторникам в 11:00 и по субботам в 17:00, каникулами на новый год и неделей в августе (15 числа), и это первая неделя учебы</b>
+        <pre>/build_JS-5 1-16:00/4-19:30 2-11:00/6-17:00 27-12-2020/15-08-2021 1</pre>
         
         <pre>Готово))</pre>
         
         <b>PS:</b>
         
-        <pre>Вы также можете редактировать номер следующего занятия или контрольной, вводите команду /setup_ и затем exam или lesson и через пробел на какой номер вы хотите поменять.</pre>
-        <pre>Например, /setup_lesson 83 мы меняем номер следующего занятия на 83, или /setup_exam 9 мы ставим номер следующей контрольной 9</pre>
+        <pre>Вы также можете редактировать номер текущей недели, с помощью команды /setweek_.</pre>
+        <pre>Например, /setweek_3 мы меняем текущую неделю на 3 (считать неделю просто, разделите номер занятия текущего на количество занятий в неделе, например занятие 22 при двух занятиях в неделю, это 11 неделя обучения)))</pre>
         
         <b>PPS:</b>
         
-        <pre>Можно указать админа группы с помощью /setadmin_ , человек из администрации, который решает вопросы группы, и чьи данные и контакты показываются в информативных сообщениях.</pre>
-        <pre>Например, /setadmin_Nazira +7(777)777-77-77 @Nazira мы ставим админом группы Назиру и оставляем ее номер телефона и имя в телеге. писать можно что угодно, хоть просто имя, хоть с контактами имя, хоть характеристику админа))</pre>
+        <pre>Можно указать админа группы с помощью /setadmin_ </pre>
+        <pre>Например, /setadmin_Nazira +7(777)777-77-77 @Nazira мы ставим админом группы Назиру с какими то контактными данными.</pre>
         
         <b>PPPS:</b>
-        
-        <pre>Еще можно менять дату текущего (последнего, следующего, это все одно и то же занятие на самом деле) занятия, это скорее всего понадобится сделать только один раз (и то, если этого не сделать все само собой поставится после первого уведомления) для демонстрации на ориентации</pre>
-        <pre>Напишите команду /putdate_ и сразу без пробела напишите дату для последнего занятия. На ориентации это будет дата первого занятия кстати, так как счет идет с 1, и от этой даты и от этого занятия произойдет расчет даты следующей контрольной!</pre>
-        <pre>Дату пишем в формате dd-mm-yyyy</pre>
-        <pre>Например, /putdate_20-04-2021 значит, что дата "текущего" занятия 20 апреля 2021 года</pre>
-        <pre>Короче, при создании группы мы же в команде /build_ в конце напишем 1 1 так как следующее занятие 1 и следующая контрольная 1. Так вот для вот этого 1 (первого) занятия нужно указать настоящую дату, когда это занятие будет и все)))</pre>
-        
-         <b>PPPPS:</b>
-         <pre>Чтобы посмотреть данные всех групп, введите команду /allgroups в личной переписке с ботом</pre>
+        <pre>Чтобы посмотреть данные всех групп, введите команду /allgroups в личной переписке с ботом</pre>
          
-         <b>PPPPPS:</b>
-         <pre>Чтобы удалить группу, напишите хоть лично, хоть в группе команду /delete_ затем id группы (можно получить с помощью /allgroups) и затем через пробел пароль, пароль знают админы</pre>
-         <pre>Например, кто-то создал левую ненужную или тестовую группу с id 608ce9694d1311418c93ec9f</pre>
-         <pre>Чтобы удалить эту группу напишите /delete_608ce9694d1311418c93ec9f ****** (где ****** это пароль)</pre>
+        <b>PPPPS:</b>
+        <pre>Чтобы удалить группу, напишите хоть лично, хоть в группе команду /delete_ затем id группы (можно получить с помощью /allgroups) и затем через пробел пароль, пароль знают админы</pre>
+        <pre>Например, кто-то создал левую ненужную или тестовую группу с id 608ce9694d1311418c93ec9f</pre>
+        <pre>Чтобы удалить эту группу напишите /delete_608ce9694d1311418c93ec9f ****** (где ****** это пароль)</pre>
 
                                             <pre>           &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774;</pre>
         
         <strong>----------------------------------------------------------------</strong>
-`
+                    `
                     await bot.sendMessage(msg.chat.id, text, {
                         parse_mode: "HTML"
                     })
@@ -505,59 +484,53 @@ bot.onText(/\/show/, async (msg) => {
     });
     if (isBotAdmin) {
     try {
-        const lesson = await Lesson.findOne({chatId: msg.chat.id})
-        let dif: number
-        if (lesson.lessonNumber > 1) {
-            dif = (lesson.lessonNumber - 1) % 8
-        } else {
-            dif = lesson.lessonNumber % 8
-        }
-        const arrWithRestDays = [{key: 1, value: 26}, {key: 2, value: 23}, {key: 3, value: 19}, {key: 4, value: 16}, {key: 5, value: 12}, {key: 6, value: 9}, {key: 7, value: 5},  {key: 0, value: 2}]
-        let result = 0
-        arrWithRestDays.forEach((el: any) => {
-            if (el.key === dif) {
-                result = el.value
+        const group = await Group.findOne({chatId: msg.chat.id})
+        const thisWeekSaturday = moment().endOf('week')
+        let diff = 4 - ((group.currentWeek + 1) % 4)
+        for (let i = 0; i < group.holidayWeeksNumbers.length; i++) {
+            if (group.holidayWeeksNumbers[i] - (group.currentWeek + 1) <= 4 || !group.isActive) {
+                diff += 1
             }
-        })
-        if (lesson.lessonDayOne === "2") result -= 1
-        const nextSaturdaySimpleDate = buildMomentDate(lesson.dateOfLastLesson).add(result, "days")
-        const monthBeforeExam = buildMomentDate(lesson.dateOfLastLesson).add(result, "days").subtract(28, 'days')
-        const holidayOne = buildMomentDate(lesson.holidayOne)
-        const holidayTwo = buildMomentDate(lesson.holidayTwo)
-        if ((holidayOne < nextSaturdaySimpleDate && holidayOne >= monthBeforeExam) || (holidayTwo < nextSaturdaySimpleDate && holidayTwo >= monthBeforeExam)) {
-            result += 7
         }
-        dateOfNextSaturday = buildMomentDate(lesson.dateOfLastLesson).add(result, "days").format("DD-MM-YYYY")
+        const examSaturday = thisWeekSaturday.add(diff, "weeks").format("DD-MM-YYYY")
+        const weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',]
 
-        const text = `
+        let text = `
+<b>----------------------------</b>
 
-<strong>--------------------------------------</strong>
+<b>Данные по вашей группе</b>
 
-
-<strong>Данные по вашей группе</strong>
-        
-        
-<b>Ваша группа </b><pre>${lesson.groupName}</pre>
-
-<b>Вы учитесь по </b><pre>${weekDays[lesson.lessonDayOne]} и ${weekDays[lesson.lessonDayTwo]}</pre>
-
-<b>По времени c </b><pre>${lessonTime[lesson.time]}</pre>
-
-<b>Вебинары по </b><pre>${weekDays[lesson.webinarOne]}  ${weekDays[lesson.webinarTwo] ? " и по " + weekDays[lesson.webinarTwo] : ""}</pre>
-
-<b>Номер следующего занятия </b><pre>#${lesson.lessonNumber}</pre>
-
-<b>Контрольная </b><pre>#${lesson.examNumber} будет в субботу ${dateOfNextSaturday}</pre>     
-
-<b>Первые каникулы</b><pre>#${lesson.holidayOne}</pre> 
-     
-<b>Вторые каникулы</b><pre>#${lesson.holidayTwo}</pre> 
-
-<b>Админ вашей группы</b><pre>#${lesson.groupAdmin}</pre> 
-     
-<strong>--------------------------------------</strong>
- 
+<b>Имя группы</b><pre>${group.groupName}</pre> 
+<b>Следующая контрольная</b><pre>#${Math.floor(group.currentWeek / 4) + 1} будет ${examSaturday}</pre> 
+<b>Админ вашей группы</b><pre>${group.groupAdmin}</pre> 
 `
+        text += `<b>----------------------------</b>
+<b>Занятия по </b>
+`
+        for (let i = 0; i < group.lessons.length; i++) {
+            text += Object.keys(group.lessons[i]).map(key => {
+                return `<pre>${weekDays[parseInt(key) - 1]} в ${group.lessons[i][key]}</pre> 
+`
+            })
+        }
+        text += `<b>----------------------------</b>
+<b>Вебинары по </b>
+`
+        for (let i = 0; i < group.webinars.length; i++) {
+            text += Object.keys(group.webinars[i]).map(key => {
+                return `<pre>${weekDays[parseInt(key) - 1]} в ${group.webinars[i][key]}</pre> 
+`
+            })
+        }
+        text += `<b>----------------------------</b>
+<b>Даты каникул</b>
+`
+        for (let i = 0; i < group.holidays.length; i++) {
+            text += `<pre>${group.holidays[i]}</pre> 
+`
+        }
+
+
 
         const send = await bot.sendMessage(msg.chat.id, text, {
             parse_mode: "HTML"
@@ -581,74 +554,67 @@ bot.onText(/\/show/, async (msg) => {
  */
 bot.onText(/\/allgroups/, async (msg) => {
     const isPrivate = msg.chat.type === "private"
-    const arrWithRestDays = [{key: 1, value: 26}, {key: 2, value: 23}, {key: 3, value: 19}, {key: 4, value: 16}, {key: 5, value: 12}, {key: 6, value: 9}, {key: 7, value: 5},  {key: 0, value: 2}]
     if (isPrivate) {
         try {
-            const lesson = await Lesson.find()
-            if (lesson.length === 0) {
-                await bot.sendMessage(msg.chat.id, "Групп в наличии нет, какой кошмар")
-            }
-            for (let i = 0; i < lesson.length; i++) {
-                const totalAmountOfUsers: number = await bot.getChatMembersCount(lesson[i].chatId)
-                const admins = await bot.getChatAdministrators(lesson[i].chatId)
-                const amountWithoutAdmins: number = totalAmountOfUsers - admins.length
-                let dif: number
-                if (lesson[i].lessonNumber > 1) {
-                    dif = (lesson[i].lessonNumber - 1) % 8
-                } else {
-                    dif = lesson[i].lessonNumber % 8
-                }
-
-                let result = 0
-                arrWithRestDays.map((el: any) => {
-                    if (el.key === dif) {
-                        result = el.value
-                        return null
+            const groups = await Group.find()
+            for (let i = 0; i < groups.length; i++) {
+                const group = groups[i]
+                const thisWeekSaturday = moment().endOf('week')
+                let diff = 4 - ((group.currentWeek + 1) % 4)
+                for (let j = 0; j < group.holidayWeeksNumbers.length; j++) {
+                    if (group.holidayWeeksNumbers[j] - (group.currentWeek + 1) <= 4 || !group.isActive) {
+                        diff += 1
                     }
+                }
+                const examSaturday = thisWeekSaturday.add(diff, "weeks").format("DD-MM-YYYY")
+                const weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',]
+
+                let text = `
+<b>----------------------------</b>
+
+<b>Данные по вашей группе</b>
+
+<b>Имя группы</b><pre>${group.groupName}</pre> 
+<b>Следующая контрольная</b><pre>#${Math.floor(group.currentWeek / 4) + 1} будет ${examSaturday}</pre> 
+<b>Админ вашей группы</b><pre>${group.groupAdmin}</pre> 
+`
+                text += `<b>----------------------------</b>
+<b>Занятия по </b>
+`
+                for (let j = 0; j < group.lessons.length; j++) {
+                    text += Object.keys(group.lessons[j]).map(key => {
+                        return `<pre>${weekDays[parseInt(key) - 1]} в ${group.lessons[j][key]}</pre> 
+`
+                    })
+                }
+                text += `<b>----------------------------</b>
+<b>Вебинары по </b>
+`
+                for (let j = 0; j < group.webinars.length; j++) {
+                    text += Object.keys(group.webinars[j]).map(key => {
+                        return `<pre>${weekDays[parseInt(key) - 1]} в ${group.webinars[j][key]}</pre> 
+`
+                    })
+                }
+                text += `<b>----------------------------</b>
+<b>Даты каникул</b>
+`
+                for (let j = 0; j < group.holidays.length; j++) {
+                    text += `<pre>${group.holidays[j]}</pre> 
+`
+                }
+                text += `
+<b>ID группы</b> <pre>${group._id}</pre>
+                `
+                const numbersDividers = `
+<b>----------------------------</b>
+<b>${i + 1}</b>
+<b>----------------------------</b>
+                `
+                await bot.sendMessage(msg.chat.id, numbersDividers, {
+                    parse_mode: "HTML"
                 })
 
-                if (lesson[i].lessonDayOne === "2") result -= 1
-                const nextSaturdaySimpleDate = buildMomentDate(lesson[i].dateOfLastLesson).add(result, "days")
-                const monthBeforeExam = buildMomentDate(lesson[i].dateOfLastLesson).add(result, "days").subtract(28, 'days')
-                const holidayOne = buildMomentDate(lesson[i].holidayOne)
-                const holidayTwo = buildMomentDate(lesson[i].holidayTwo)
-                if ((holidayOne < nextSaturdaySimpleDate && holidayOne >= monthBeforeExam) || (holidayTwo < nextSaturdaySimpleDate && holidayTwo >= monthBeforeExam)) {
-                    result += 7
-                }
-                dateOfNextSaturday = buildMomentDate(lesson[i].dateOfLastLesson).add(result, "days").format("DD-MM-YYYY")
-
-                const text = `
-
-<strong>--------------------------------------</strong>
-
-<b>Данные по группе </b><pre>${lesson[i].groupName}</pre>
-
-<b>Людей в чате группы </b><pre>${totalAmountOfUsers}</pre>
-
-<b>Людей в чате без админов </b><pre>${amountWithoutAdmins}</pre>
-
-<b>Учебные дни по </b><pre>${weekDays[lesson[i].lessonDayOne]} и ${weekDays[lesson[i].lessonDayTwo]}</pre>
-
-<b>По времени c </b><pre>${lessonTime[lesson[i].time]}</pre>
-
-<b>Вебинары по </b><pre>${weekDays[lesson[i].webinarOne]}  ${weekDays[lesson[i].webinarTwo] ? " и по " + weekDays[lesson[i].webinarTwo] : ""}</pre>
-
-<b>Номер следующего занятия </b><pre>#${lesson[i].lessonNumber}</pre>
-
-<b>Контрольная </b><pre>#${lesson[i].examNumber} будет в субботу ${dateOfNextSaturday}</pre>
-
-<b>Первые каникулы</b><pre>#${lesson[i].holidayOne}</pre>
-
-<b>Вторые каникулы</b><pre>#${lesson[i].holidayTwo}</pre>
-
-<b>Админ этой группы</b><pre>#${lesson[i].groupAdmin}</pre> 
-
-<b>ID группы</b><pre>${lesson[i]._id}</pre>
-
-<strong>--------------------------------------</strong>
-
-`
-                await bot.sendMessage(msg.chat.id, (i+1).toString())
                 await bot.sendMessage(msg.chat.id, text, {
                     parse_mode: "HTML"
                 })
@@ -676,10 +642,10 @@ bot.onText(/\/delete_(.+)/, async (msg, arr: any) => {
         `
         try {
             const ii = arr[1].replace(/\s+/g,' ').trim().split(" ")
-            const lesson = await Lesson.findOne({_id: ii[0]})
+            const group = await Group.findOne({_id: ii[0]})
             if (ii[1] === "coolPasha") {
-                await lesson.delete()
-                await bot.sendMessage(msg.chat.id, `Группа ${lesson.groupName} успешно удалена из базы`)
+                await group.delete()
+                await bot.sendMessage(msg.chat.id, `Группа ${group.groupName} успешно удалена из базы`)
             } else {
                 await bot.sendMessage(msg.chat.id, funnyResponse, {
                     parse_mode: "HTML"
@@ -711,7 +677,7 @@ bot.onText(/\/letsplay/, async (msg) => {
     if (isBotAdmin) {
         try {
             const text = `
-            <b>Как команду напиши мне что ты слышишь в этом файле</b>
+            <b>Как команду напиши мне что ты слышишь в этом файле (если звука нет, то скачайте файл и запустите через проигрыватель)</b>
         `
             const send = await bot.sendAudio(msg.chat.id, "./ciphers/guesswhat.wav", {
                 caption: text,
@@ -930,130 +896,132 @@ bot.onText(/\/iamthechampion/, async (msg) => {
  * Функции для составления необходимых сообщений
  */
 
-/**
- * Функция для составления базового сообщения, и вебинарного сообщения (возникла из-за частых переносов дат и времени вебинара), как о контрольной (но есть и другие сообщения о контрольной), так и о занятиях
- */
-async function buildTheMessage(chatId: string, typeOfLesson: string, lessonOrExamNumber: string, time: string, date: string, additionalText: string) {
-    const text: string = `Внимание #напоминаем, сегодня (${date}) у вас состоится ${typeOfLesson} номер #${lessonOrExamNumber} в ${time}, ${additionalText}`
-    await bot.sendMessage(chatId, text)
-}
-async function buildTheWebinarMessage(chatId: string, typeOfLesson: string, date: string, additionalText: string) {
-    const text: string = `Внимание #напоминаем, сегодня (${date}) у вас состоится ${typeOfLesson}, ${additionalText}`
-    await bot.sendMessage(chatId, text)
-}
-
-/**
- * Функция для определения какое именно будет сообщение, идет проверка на день недели и вечернюю или дневную группу
- */
-async function buildTheMessageWithConditions(lesson: Array<LessonInterface>, day: string) {
-    const date = moment().format("DD-MM-YYYY")
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonDayOne === day || lesson[i].lessonDayTwo === day) {
-            if (lesson[i].time === 'evening') {
-                await buildTheMessage(lesson[i].chatId, "Занятие", lesson[i].lessonNumber+"", "19:30", date, "читайте раздатку перед занятием")
-            } else if (lesson[i].time === 'lunch') {
-                await buildTheMessage(lesson[i].chatId, "Занятие", lesson[i].lessonNumber+"", "16:00", date, "читайте раздатку перед занятием")
-            }
-            lesson[i].lessonNumber += 1
-            lesson[i].dateOfLastLesson = date
+const buildLessonMessage = async (groups: Array<GroupInterface>, day: any) => {
+    for (let i = 0; i < groups.length; i++) {
+        for (let j = 0; j < groups[i].lessons.length; j++) {
+            const isExamToday = day === 6 && (groups[i].currentWeek + 1) % 4 === 0
+            if (isExamToday) continue
             // @ts-ignore
-            lesson[i].save()
-        }
-    }
-}
-
-/**
- * Функция для составления сообщения о вебинаре, проверяет на среду и пятницу, время зашито как 19:30
- */
-async function buildWebinarMessage(lesson: Array<LessonInterface>, day: string) {
-    const date = moment().format("DD-MM-YYYY")
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].webinarOne === day || lesson[i].webinarTwo === day) {
-            if ((lesson[i].webinarOne === "3" || lesson[i].webinarOne === "2") && lesson[i].lessonNumber % 8 === 1) {
-                continue
+            const checkKeyAndGetTime = groups[i].lessons[j][day]
+            if (checkKeyAndGetTime && groups[i].isActive) {
+                const lessonNum = (groups[i].currentWeek) * groups[i].lessons.length + j + 1
+                await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, сегодня (${moment().format("DD-MM-YYYY")}) у вас состоится занятие номер #${lessonNum} в ${checkKeyAndGetTime}, читайте раздатку перед занятием`, {
+                    parse_mode: "HTML"
+                })
             }
-            await buildTheWebinarMessage(lesson[i].chatId, "Вебинар", date, `Пишите вопросы с хэштэгом #Навебинар`)
+        }
+    }
+}
+
+const buildWebinarMessage = async (groups: Array<GroupInterface>, day: any) => {
+    for (let i = 0; i < groups.length; i++) {
+        for (let j = 0; j < groups[i].webinars.length; j++) {
+            const isExamToday = day === 6 && (groups[i].currentWeek + 1) % 4 === 0
+            if (isExamToday) continue
+            // @ts-ignore
+            const checkKeyAndGetTime = groups[i].webinars[j][day]
+            if (checkKeyAndGetTime && groups[i].isActive) {
+                await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, сегодня (${moment().format("DD-MM-YYYY")}) у вас состоится вебинар в ${checkKeyAndGetTime}, пишите вопросы с хэштэгом #Навебинар`, {
+                    parse_mode: "HTML"
+                })
+            }
         }
     }
 }
 
 /**
- * Функция для сообщения о субботнем вебинаре
+ * Составление сообщения о наступающей контрольной
  */
-async function buildWebinarSaturdayMessage(lesson: LessonInterface) {
-    const date = moment().format("DD-MM-YYYY")
-    if (lesson.webinarOne === "6" || lesson.webinarTwo === "6") {
-        await buildTheWebinarMessage(lesson.chatId, "Вебинар", date, `Пишите вопросы с хэштэгом #Навебинар`)
-    }
-}
-
-/**
- * Функция для сообщения о контрольной в день контрольной
- */
-async function buildExamMessage(lesson: Array<LessonInterface>) {
-    const date = moment().format("DD-MM-YYYY")
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if ((lesson[i].lessonNumber - 1) % 8 === 0 && lesson[i].lessonNumber >= 8) {
-            await buildTheMessage(lesson[i].chatId, "Контрольная", lesson[i].examNumber + "", "11:00", date, `готовьте треккер если вы сдаете онлайн, включайте зум, приготовьте ручку и бумагу, лишними не будут))`)
-            lesson[i].examNumber += 1
-        } else {
-            await buildWebinarSaturdayMessage(lesson[i])
-        }
-        // @ts-ignore
-        lesson[i].save()
-    }
-}
-
-
-/**
- * Функция для сообщения о контролльной в течение недели до контрольной с указанием даты контрольной
- */
-async function buildExamMessageBeforeActualDate(lesson: Array<LessonInterface>, date: string) {
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonNumber % 8 === 0 || (lesson[i].lessonNumber + 1) % 8 === 0) {
-            const text: string = `Внимание #напоминаем, в эту субботу (${date}) у вас состоится Контрольная номер #${lesson[i].examNumber} c 11:00 до 19:00, повторите все темы этого месяца`
-            await bot.sendMessage(lesson[i].chatId, text)
+const buildComingExamMessage = async (groups: Array<GroupInterface>, date: string) => {
+    for (let i = 0; i < groups.length; i++) {
+        if ((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive) {
+            await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, в эту субботу (${date}) у вас состоится контрольная работа номер #${(groups[i].currentWeek + 1) / 4} c 11:00 до 19:00, повторите все пройденные темы этого месяца`, {
+                parse_mode: "HTML"
+            })
         }
     }
 }
 
 /**
- * Функция для напоминания об оплате, отрабатывает после первого первого занятия после контрольной
- * И для сообщения о дедлайне оплвты, отрабатывает в пятницу следующей недели после контрольной, не отрабатывает во время каникул
+ * Составление сообщения о контрольной сегодня
  */
-async function buildPaymentNotificationMessage(lesson: Array<LessonInterface>, date: string) {
+const buildTodayExamMessage = async (groups: Array<GroupInterface>) => {
+    for (let i = 0; i < groups.length; i++) {
+        if ((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive) {
+            await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, сегодня (${moment().format("DD-MM-YYYY")}) у вас состоится контрольная работа номер #${(groups[i].currentWeek + 1) / 4} c 11:00 до 19:00, подготовьте треккеры если пишите онлайн, подготовьте все необходимые по вашему мнению инструменты`, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
+
+/**
+ * Составление сообщения о предстоящей оплате
+ */
+const buildPaySoonMessage = async (groups: Array<GroupInterface>, date: string) => {
+    for (let i = 0; i < groups.length; i++) {
+        if ((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3) {
+            await bot.sendMessage(groups[i].chatId, `Всем привет, напоминаем об оплате за текущий месяц, дедлайн до пятницы (${date})`, {
+                parse_mode: "HTML"
+            })
+        }
+    }
+}
+
+/**
+ * Составление сообщения об оплате сегодня
+ */
+const buildPayTodayMessage = async (groups: Array<GroupInterface>) => {
     const months = ["noFirstMonth", "второй", "третий","четвертый","пятый","шестой","седьмой","восьмой","девятый","десятый","одиннадцатый","двенадцатый","тринадцатый","четырнадцатый","пятнадцатый"]
-    const todayDate = moment().format("DD-MM-YYYY")
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (todayDate === date && (lesson[i].lessonNumber % 8 === 2 || lesson[i].lessonNumber % 8 === 3) && lesson[i].lessonNumber > 8) {
-            const text = `Всем привет, #напоминаем об оплате за ${months[lesson[i].examNumber - 1]} учебный месяц. Сегодня - ${date}, крайний день внесения  оплаты.`
-            await bot.sendMessage(lesson[i].chatId, text)
-        }
-        else if ((lesson[i].lessonNumber % 8 === 1 || lesson[i].lessonNumber % 8 === 2) && lesson[i].lessonNumber > 8) {
-            const text = `Всем привет, напоминаем об оплате за текущий месяц, дедлайн до пятницы (${date})`
-            await bot.sendMessage(lesson[i].chatId, text)
+    for (let i = 0; i < groups.length; i++) {
+        if ((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3) {
+            await bot.sendMessage(groups[i].chatId, `Всем привет, #напоминаем об оплате за ${months[(groups[i].currentWeek) / 4]} учебный месяц. Сегодня - ${moment().format("DD-MM-YYYY")}, крайний день внесения  оплаты.`, {
+                parse_mode: "HTML"
+            })
         }
     }
 }
+
+/**
+ * Прибавление недели, обычшый счетчик, срабаьывает раз в неделю, скорее всего в понедельник  самом начале дня ночью.
+ */
+const incrementWeek = async (groups: Array<GroupInterface>) => {
+    for (let i = 0; i < groups.length; i++) {
+        groups[i].currentWeek++
+        // @ts-ignore
+        groups[i].save()
+    }
+}
+
+/**
+ * Проверка на каникулы, переключает isActive группы на false либо наоборот обратно на true
+ */
+const isHoliday = async (group: GroupInterface) => {
+    for (let i = 0; i < group.holidayWeeksNumbers.length; i++) {
+        if (group.holidayWeeksNumbers[i] === (group.currentWeek + 1)) {
+            group.holidayWeeksNumbers.splice(i, 1)
+            group.isActive = false
+            group.currentWeek -= 1
+            // @ts-ignore
+            group.save()
+            return
+        }
+    }
+    group.isActive = true
+    // @ts-ignore
+    group.save()
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Функция для информирования о посещении школы
  */
-async function buildVisitAttractorMessage(lesson: Array<LessonInterface>) {
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonNumber === 1 || lesson[i].lessonNumber === 2) {
+async function buildVisitAttractorMessage(groups: Array<GroupInterface>) {
+    for (let i = 0; i < groups.length; i++) {
+        if (groups[i].currentWeek === 0 && groups[i].isActive) {
             const text = `
 
 <b>#Важнаяинформация</b> 
@@ -1067,7 +1035,7 @@ async function buildVisitAttractorMessage(lesson: Array<LessonInterface>) {
 Желаем всем вам успехов в учебе! 🤓
 
             `
-            await bot.sendMessage(lesson[i].chatId, text, {
+            await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
             })
         }
@@ -1077,11 +1045,9 @@ async function buildVisitAttractorMessage(lesson: Array<LessonInterface>) {
 /**
  * Функция для информирования об индивидуальных занятиях
  */
-async function buildIndividualLessonsAnnounce(lesson: Array<LessonInterface>) {
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonNumber === 2) {
+async function buildIndividualLessonsAnnounce(groups: Array<GroupInterface>) {
+    for (let i = 0; i < groups.length; i++) {
+        if (groups[i].currentWeek === 0 && groups[i].isActive) {
             const text = `
 
 <b>#Важноеобъявление</b>
@@ -1114,7 +1080,7 @@ https://docs.google.com/document/d/1UGUCYyg6RZh4WGBn7pncMyrOrfGrzQT_-LMFTvfXWKk/
 
 
             `
-            await bot.sendMessage(lesson[i].chatId, text, {
+            await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
             })
         }
@@ -1124,11 +1090,9 @@ https://docs.google.com/document/d/1UGUCYyg6RZh4WGBn7pncMyrOrfGrzQT_-LMFTvfXWKk/
 /**
  * Функция для информирования об окончании тестогого периода
  */
-async function buildEndOfTestPeriodMessage(lesson: Array<LessonInterface>) {
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonNumber === 3) {
+async function buildEndOfTestPeriodMessage(groups: Array<GroupInterface>) {
+    for (let i = 0; i < groups.length; i++) {
+        if (groups[i].currentWeek === 1 && groups[i].isActive) {
             const text = `
             
 <b>#Важноеобъявление</b> 
@@ -1150,12 +1114,12 @@ async function buildEndOfTestPeriodMessage(lesson: Array<LessonInterface>) {
 Важно❗️ 
 После оплаты, пожалуйста, скиньте квитанцию об оплате ${config.accountant} , т.к. мы увидим вашу оплату в нашей выписке только на следующий рабочий день.
 
-В пятницу после 18-00 мы отключаем доступ ребятам кто решил не продолжать обучение. О своем решении приостановить обучение как можно раньше напишите пожалуйста в личку Администратору вашей группы ${lesson[i].groupAdmin}.
+В пятницу после 18-00 мы отключаем доступ ребятам кто решил не продолжать обучение. О своем решении приостановить обучение как можно раньше напишите пожалуйста в личку Администратору вашей группы ${groups[i].groupAdmin}.
 
 Все вопросы, касающиеся остатков по оплате, способах оплаты и прочие вопросы, не касающиеся программирования, задавайте в личку ${config.accountant}.
 
             `
-            await bot.sendMessage(lesson[i].chatId, text, {
+            await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
             })
         }
@@ -1166,11 +1130,9 @@ async function buildEndOfTestPeriodMessage(lesson: Array<LessonInterface>) {
  * Функция для напоминания об оплате, отрабатывает после первого первого занятия после контрольной
  * И для сообщения о дедлайне оплвты, отрабатывает в пятницу следующей недели после контрольной, не отрабатывает во время каникул
  */
-async function buildEndOfTestPeriodFinalLastMessage(lesson: Array<LessonInterface>) {
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonNumber === 5) {
+async function buildEndOfTestPeriodFinalLastMessage(groups: Array<GroupInterface>) {
+    for (let i = 0; i < groups.length; i++) {
+        if (groups[i].currentWeek === 1 && groups[i].isActive) {
             const text = `
 
 <b>#Важноеобъявление</b> 
@@ -1179,7 +1141,7 @@ async function buildEndOfTestPeriodFinalLastMessage(lesson: Array<LessonInterfac
 Все вопросы, касающиеся остатков по оплате, способах оплаты и прочие вопросы, не касающиеся программирования, задавайте в личку ${config.accountant}.
 
             `
-            await bot.sendMessage(lesson[i].chatId, text, {
+            await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
             })
         }
@@ -1189,11 +1151,9 @@ async function buildEndOfTestPeriodFinalLastMessage(lesson: Array<LessonInterfac
 /**
  * Функция для информирования о важности сдавать домашки в срок и что скидку получают те, кто набирает свыше 95 баллов
  */
-async function buildMessageAboutDiscountAndDeadlines(lesson: Array<LessonInterface>) {
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonNumber === 5) {
+async function buildMessageAboutDiscountAndDeadlines(groups: Array<GroupInterface>) {
+    for (let i = 0; i < groups.length; i++) {
+        if (groups[i].currentWeek === 2 && groups[i].isActive) {
             const text = `
             
 <b>#Напоминаем</b>
@@ -1202,7 +1162,7 @@ async function buildMessageAboutDiscountAndDeadlines(lesson: Array<LessonInterfa
 
 
             `
-            await bot.sendMessage(lesson[i].chatId, text, {
+            await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
             })
         }
@@ -1212,11 +1172,9 @@ async function buildMessageAboutDiscountAndDeadlines(lesson: Array<LessonInterfa
 /**
  * Функция для пожелания удачи перед первой контрольной
  */
-async function buildWishGoodLuckMessageForFirstExam(lesson: Array<LessonInterface>) {
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonNumber === 8 || lesson[i].lessonNumber === 9) {
+async function buildWishGoodLuckMessageForFirstExam(groups: Array<GroupInterface>) {
+    for (let i = 0; i < groups.length; i++) {
+        if (groups[i].currentWeek === 3 && groups[i].isActive) {
             const text = `
 <b>Уважаемые студенты!</b>
 Хотим пожелать вам успеха на завтрашней контрольной! Вы справитесь!
@@ -1225,7 +1183,7 @@ async function buildWishGoodLuckMessageForFirstExam(lesson: Array<LessonInterfac
 В 19-00 вы должны сдать вашу работу, вне зависимости от того, закончили вы проект или нет. Работы сданные после дедлайна будут штрафоваться существенным снижением баллов.
 
             `
-            await bot.sendMessage(lesson[i].chatId, text, {
+            await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
             })
         }
@@ -1235,11 +1193,9 @@ async function buildWishGoodLuckMessageForFirstExam(lesson: Array<LessonInterfac
 /**
  * Функция для поздравлений после первой контрольной
  */
-async function buildCongratulationMessageAfterFirstExam(lesson: Array<LessonInterface>) {
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonNumber === 9) {
+async function buildCongratulationMessageAfterFirstExam(groups: Array<GroupInterface>) {
+    for (let i = 0; i < groups.length; i++) {
+        if (groups[i].currentWeek === 4 && groups[i].isActive) {
             const text = `
 <b>#Объявление</b>
 Всем привет!
@@ -1247,7 +1203,7 @@ async function buildCongratulationMessageAfterFirstExam(lesson: Array<LessonInte
 Вы большие молодцы, и мы надеемся, что вы все хорошо справились☺️
 
             `
-            await bot.sendMessage(lesson[i].chatId, text, {
+            await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
             })
         }
@@ -1257,11 +1213,9 @@ async function buildCongratulationMessageAfterFirstExam(lesson: Array<LessonInte
 /**
  * Функция напоминание об академической честности
  */
-async function buildCheatingIsBadMessage(lesson: Array<LessonInterface>) {
-    for (let i = 0; i < lesson.length; i++) {
-        let holiday: boolean = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo)
-        if (holiday) continue
-        if (lesson[i].lessonNumber === 9 || lesson[i].lessonNumber === 17) {
+async function buildCheatingIsBadMessage(groups: Array<GroupInterface>) {
+    for (let i = 0; i < groups.length; i++) {
+        if ((groups[i].currentWeek === 4 || groups[i].currentWeek === 8) && groups[i].isActive) {
             const text = `
 <b>#Важнаяинформация 😌</b>
 
@@ -1280,7 +1234,7 @@ async function buildCheatingIsBadMessage(lesson: Array<LessonInterface>) {
  Это нечестно по отношению к центру и остальным студентам, это формирует непрофессиональное поведение и мешает вам стать востребованным разработчиком в будущем.
 
             `
-            await bot.sendMessage(lesson[i].chatId, text, {
+            await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
             })
         }
@@ -1288,20 +1242,6 @@ async function buildCheatingIsBadMessage(lesson: Array<LessonInterface>) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/**
- * Функция для проверки идут ли каникулы или нет, пропускает оповещения, счетчики занятий не растут. Возвращает булевое значение, и каждый раз перед отправкой
- * сообщения мы проверяем каникулы ли или нет.
- * Важно помнить, что если не поставить эту проверку в оповещение об оплате, то есть риск, что во время каникул людей будут дергать сообщениями об оплате
- */
-function isHoliday(dateOne: string, dateTwo: string) {
-    const today = moment()
-    let checkDateOne = buildMomentDate(dateOne)
-    let checkDateTwo = buildMomentDate(dateTwo)
-    if ((today > checkDateOne && today < checkDateOne.add(6, "days")) || (today > checkDateTwo && today < checkDateTwo.add(6, "days"))) {
-        return true
-    }
-    return false
-}
 
 /**
  * Функция для составления даты под moment

@@ -44,12 +44,17 @@ var node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api"));
 var cors_1 = __importDefault(require("cors"));
 var mongoose_1 = __importDefault(require("mongoose"));
 var config_1 = require("./app/config");
-var lesson_model_1 = require("./app/models/lesson_model");
+var group_model_1 = require("./app/models/group_model");
 var node_schedule_1 = __importDefault(require("node-schedule"));
 var moment_1 = __importDefault(require("moment"));
 /**
- 8. Создать функционал логирования ошибок работы бота
- 9. Реализовать функционал отправки логов ошибок по расписанию *****
+ СДЕЛАНО 1) TODO В SHOW И ALLGROUPS Отлов каникул и учет если каникулы то дата контрольной плюс 7 дней
+ СДЕЛАНО 2) TODO Активировать и деактивировать группы если каникулы
+ СДЕЛАНО 3) TODO Каждый понедельник в начале дня прибавлять недели счетчик +1
+ СДЕЛАНО 4) TODO Удаление групп
+ СДЕЛАНО 5) TODO Базовые сообщения от админимстрации
+ СДЕЛАНО 6) TODO Инструкцию написать
+ 7) TODO Подумать может еще что добавить...
  */
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -88,23 +93,6 @@ var bot = new node_telegram_bot_api_1.default(config_1.config.telegramToken, {
 });
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
- * Необходимые переменные
- */
-var weekDays = {
-    "1": "понедельникам",
-    "2": "вторникам",
-    "3": "средам",
-    "4": "четвергам",
-    "5": "пятницам",
-    "6": "субботам",
-    "7": "воскресеньям",
-};
-var lessonTime = {
-    "evening": "19:30 до 21:30",
-    "lunch": "16:00 до 18:00"
-};
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/**
  * Здесь мы получаем сегодняшнюю дату в нужном формате, плюс создаем переменные для остлеживания даты субботы и пятницы (для контрольной и дедлайна оплаты)
  * Затем проверяем каждый день недели для отправки необходимых сообщений подходящим по параметрам группам
  */
@@ -114,36 +102,65 @@ var dateOnFriday;
  * Понедельник
  */
 node_schedule_1.default.scheduleJob("1 0 13 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
-    var lesson;
+    var groups;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, lesson_model_1.Lesson.find()];
+            case 0: return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
-                lesson = _a.sent();
-                return [4 /*yield*/, buildEndOfTestPeriodMessage(lesson)];
+                groups = _a.sent();
+                dateOnFriday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
+                dateOfNextSaturday = moment_1.default().add(5, "days").format("DD-MM-YYYY");
+                return [4 /*yield*/, buildLessonMessage(groups, 1)];
             case 2:
                 _a.sent();
-                return [4 /*yield*/, buildCongratulationMessageAfterFirstExam(lesson)];
+                return [4 /*yield*/, buildWebinarMessage(groups, 1)];
             case 3:
                 _a.sent();
-                return [4 /*yield*/, buildMessageAboutDiscountAndDeadlines(lesson)];
+                return [4 /*yield*/, buildComingExamMessage(groups, dateOfNextSaturday)];
             case 4:
                 _a.sent();
-                return [4 /*yield*/, buildCheatingIsBadMessage(lesson)];
+                return [4 /*yield*/, buildPaySoonMessage(groups, dateOnFriday)];
             case 5:
                 _a.sent();
-                dateOnFriday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
-                return [4 /*yield*/, buildPaymentNotificationMessage(lesson, dateOnFriday)];
+                return [4 /*yield*/, buildEndOfTestPeriodMessage(groups)];
             case 6:
                 _a.sent();
-                dateOfNextSaturday = moment_1.default().add(5, "days").format("DD-MM-YYYY");
-                return [4 /*yield*/, buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)];
+                return [4 /*yield*/, buildMessageAboutDiscountAndDeadlines(groups)];
             case 7:
                 _a.sent();
-                return [4 /*yield*/, buildTheMessageWithConditions(lesson, "1")];
+                return [4 /*yield*/, buildCongratulationMessageAfterFirstExam(groups)];
             case 8:
                 _a.sent();
+                return [4 /*yield*/, buildCheatingIsBadMessage(groups)];
+            case 9:
+                _a.sent();
                 return [2 /*return*/];
+        }
+    });
+}); });
+// Здесь идет прибаление недель, в самом начале понедельника, в 00:00 00минут 01 секунд и проверка на каникулы, если каникулы, то группа деактивируется и все
+node_schedule_1.default.scheduleJob("1 0 0 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
+    var groups, i;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, group_model_1.Group.find()];
+            case 1:
+                groups = _a.sent();
+                return [4 /*yield*/, incrementWeek(groups)];
+            case 2:
+                _a.sent();
+                i = 0;
+                _a.label = 3;
+            case 3:
+                if (!(i < groups.length)) return [3 /*break*/, 6];
+                return [4 /*yield*/, isHoliday(groups[i])];
+            case 4:
+                _a.sent();
+                _a.label = 5;
+            case 5:
+                i++;
+                return [3 /*break*/, 3];
+            case 6: return [2 /*return*/];
         }
     });
 }); });
@@ -151,27 +168,27 @@ node_schedule_1.default.scheduleJob("1 0 13 * * 1", function () { return __await
  * Вторник
  */
 node_schedule_1.default.scheduleJob("1 0 13 * * 2", function () { return __awaiter(void 0, void 0, void 0, function () {
-    var lesson;
+    var groups;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, lesson_model_1.Lesson.find()];
+            case 0: return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
-                lesson = _a.sent();
-                return [4 /*yield*/, buildVisitAttractorMessage(lesson)];
+                groups = _a.sent();
+                dateOnFriday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
+                dateOfNextSaturday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
+                return [4 /*yield*/, buildLessonMessage(groups, 2)];
             case 2:
                 _a.sent();
-                return [4 /*yield*/, buildWebinarMessage(lesson, "2")];
+                return [4 /*yield*/, buildWebinarMessage(groups, 2)];
             case 3:
                 _a.sent();
-                dateOnFriday = moment_1.default().add(3, "days").format("DD-MM-YYYY");
-                return [4 /*yield*/, buildPaymentNotificationMessage(lesson, dateOnFriday)];
+                return [4 /*yield*/, buildComingExamMessage(groups, dateOfNextSaturday)];
             case 4:
                 _a.sent();
-                dateOfNextSaturday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
-                return [4 /*yield*/, buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)];
+                return [4 /*yield*/, buildPaySoonMessage(groups, dateOnFriday)];
             case 5:
                 _a.sent();
-                return [4 /*yield*/, buildTheMessageWithConditions(lesson, "2")];
+                return [4 /*yield*/, buildVisitAttractorMessage(groups)];
             case 6:
                 _a.sent();
                 return [2 /*return*/];
@@ -182,24 +199,24 @@ node_schedule_1.default.scheduleJob("1 0 13 * * 2", function () { return __await
  * Среда
  */
 node_schedule_1.default.scheduleJob("1 0 13 * * 3", function () { return __awaiter(void 0, void 0, void 0, function () {
-    var lesson;
+    var groups;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, lesson_model_1.Lesson.find()];
+            case 0: return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
-                lesson = _a.sent();
-                return [4 /*yield*/, buildWebinarMessage(lesson, "3")];
+                groups = _a.sent();
+                dateOnFriday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
+                dateOfNextSaturday = moment_1.default().add(3, "days").format("DD-MM-YYYY");
+                return [4 /*yield*/, buildLessonMessage(groups, 3)];
             case 2:
                 _a.sent();
-                dateOnFriday = moment_1.default().add(2, "days").format("DD-MM-YYYY");
-                return [4 /*yield*/, buildPaymentNotificationMessage(lesson, dateOnFriday)];
+                return [4 /*yield*/, buildWebinarMessage(groups, 3)];
             case 3:
                 _a.sent();
-                dateOfNextSaturday = moment_1.default().add(3, "days").format("DD-MM-YYYY");
-                return [4 /*yield*/, buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)];
+                return [4 /*yield*/, buildComingExamMessage(groups, dateOfNextSaturday)];
             case 4:
                 _a.sent();
-                return [4 /*yield*/, buildTheMessageWithConditions(lesson, "3")];
+                return [4 /*yield*/, buildPaySoonMessage(groups, dateOnFriday)];
             case 5:
                 _a.sent();
                 return [2 /*return*/];
@@ -210,25 +227,28 @@ node_schedule_1.default.scheduleJob("1 0 13 * * 3", function () { return __await
  * Четверг
  */
 node_schedule_1.default.scheduleJob("1 0 13 * * 4", function () { return __awaiter(void 0, void 0, void 0, function () {
-    var lesson;
+    var groups;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, lesson_model_1.Lesson.find()];
+            case 0: return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
-                lesson = _a.sent();
-                return [4 /*yield*/, buildIndividualLessonsAnnounce(lesson)];
+                groups = _a.sent();
+                dateOnFriday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
+                dateOfNextSaturday = moment_1.default().add(2, "days").format("DD-MM-YYYY");
+                return [4 /*yield*/, buildLessonMessage(groups, 4)];
             case 2:
                 _a.sent();
-                dateOnFriday = moment_1.default().add(1, "days").format("DD-MM-YYYY");
-                return [4 /*yield*/, buildPaymentNotificationMessage(lesson, dateOnFriday)];
+                return [4 /*yield*/, buildWebinarMessage(groups, 4)];
             case 3:
                 _a.sent();
-                dateOfNextSaturday = moment_1.default().add(2, "days").format("DD-MM-YYYY");
-                return [4 /*yield*/, buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)];
+                return [4 /*yield*/, buildComingExamMessage(groups, dateOfNextSaturday)];
             case 4:
                 _a.sent();
-                return [4 /*yield*/, buildTheMessageWithConditions(lesson, "4")];
+                return [4 /*yield*/, buildPaySoonMessage(groups, dateOnFriday)];
             case 5:
+                _a.sent();
+                return [4 /*yield*/, buildIndividualLessonsAnnounce(groups)];
+            case 6:
                 _a.sent();
                 return [2 /*return*/];
         }
@@ -238,27 +258,26 @@ node_schedule_1.default.scheduleJob("1 0 13 * * 4", function () { return __await
  * Пятница
  */
 node_schedule_1.default.scheduleJob("1 0 13 * * 5", function () { return __awaiter(void 0, void 0, void 0, function () {
-    var lesson;
+    var groups;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, lesson_model_1.Lesson.find()];
+            case 0: return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
-                lesson = _a.sent();
-                return [4 /*yield*/, buildWebinarMessage(lesson, "5")];
+                groups = _a.sent();
+                dateOfNextSaturday = moment_1.default().add(1, "days").format("DD-MM-YYYY");
+                return [4 /*yield*/, buildLessonMessage(groups, 5)];
             case 2:
                 _a.sent();
-                dateOnFriday = moment_1.default().format("DD-MM-YYYY");
-                dateOfNextSaturday = moment_1.default().add(1, "days").format("DD-MM-YYYY");
-                return [4 /*yield*/, buildExamMessageBeforeActualDate(lesson, dateOfNextSaturday)];
+                return [4 /*yield*/, buildWebinarMessage(groups, 5)];
             case 3:
                 _a.sent();
-                return [4 /*yield*/, buildTheMessageWithConditions(lesson, "5")];
+                return [4 /*yield*/, buildComingExamMessage(groups, dateOfNextSaturday)];
             case 4:
                 _a.sent();
-                return [4 /*yield*/, buildPaymentNotificationMessage(lesson, dateOnFriday)];
+                return [4 /*yield*/, buildPayTodayMessage(groups)];
             case 5:
                 _a.sent();
-                return [4 /*yield*/, buildEndOfTestPeriodFinalLastMessage(lesson)];
+                return [4 /*yield*/, buildEndOfTestPeriodFinalLastMessage(groups)];
             case 6:
                 _a.sent();
                 return [2 /*return*/];
@@ -266,13 +285,13 @@ node_schedule_1.default.scheduleJob("1 0 13 * * 5", function () { return __await
     });
 }); });
 node_schedule_1.default.scheduleJob("1 0 18 * * 5", function () { return __awaiter(void 0, void 0, void 0, function () {
-    var lesson;
+    var groups;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, lesson_model_1.Lesson.find()];
+            case 0: return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
-                lesson = _a.sent();
-                return [4 /*yield*/, buildWishGoodLuckMessageForFirstExam(lesson)];
+                groups = _a.sent();
+                return [4 /*yield*/, buildWishGoodLuckMessageForFirstExam(groups)];
             case 2:
                 _a.sent();
                 return [2 /*return*/];
@@ -283,17 +302,20 @@ node_schedule_1.default.scheduleJob("1 0 18 * * 5", function () { return __await
  * Суббота
  */
 node_schedule_1.default.scheduleJob("1 0 10 * * 6", function () { return __awaiter(void 0, void 0, void 0, function () {
-    var lesson;
+    var groups;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, lesson_model_1.Lesson.find()];
+            case 0: return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
-                lesson = _a.sent();
-                return [4 /*yield*/, buildExamMessage(lesson)];
+                groups = _a.sent();
+                return [4 /*yield*/, buildLessonMessage(groups, 6)];
             case 2:
                 _a.sent();
-                return [4 /*yield*/, buildTheMessageWithConditions(lesson, "6")];
+                return [4 /*yield*/, buildWebinarMessage(groups, 6)];
             case 3:
+                _a.sent();
+                return [4 /*yield*/, buildTodayExamMessage(groups)];
+            case 4:
                 _a.sent();
                 return [2 /*return*/];
         }
@@ -305,187 +327,118 @@ node_schedule_1.default.scheduleJob("1 0 10 * * 6", function () { return __await
  * если вызвать функцию вновь, то предыдущая модель группы с данными будет удалена и на ее место встанет новая
  */
 bot.onText(/\/build_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, admins, admin, i, ii, oldLesson, lesson, send_1, err_1, funnyResponse, send_2;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
+    var isBotAdmin, botId, admins, admin, i, oldGroup, ii, lessons, i, webinars, i, holidays, holidayWeeksNumbers, i, currentMonday, momentDateHoliday, j, group, send_1, err_1, funnyResponse, send_2;
+    var _a, _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
             case 0:
                 isBotAdmin = false;
                 return [4 /*yield*/, bot.getMe()];
             case 1:
-                botId = _a.sent();
+                botId = _c.sent();
                 return [4 /*yield*/, bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
                         if (c.status == "administrator") {
                             isBotAdmin = true;
                         }
                     })];
             case 2:
-                _a.sent();
-                if (!isBotAdmin) return [3 /*break*/, 14];
+                _c.sent();
+                if (!isBotAdmin) return [3 /*break*/, 15];
                 return [4 /*yield*/, bot.getChatAdministrators(msg.chat.id)];
             case 3:
-                admins = _a.sent();
+                admins = _c.sent();
                 admin = false;
                 for (i = 0; i < admins.length; i++) {
                     if (admins[i].user.id === msg.from.id) {
                         admin = true;
                     }
                 }
-                if (!admin) return [3 /*break*/, 11];
-                _a.label = 4;
+                if (!admin) return [3 /*break*/, 12];
+                _c.label = 4;
             case 4:
-                _a.trys.push([4, 8, , 10]);
-                ii = arr[1].replace(/\s+/g, ' ').trim().split(" ");
-                return [4 /*yield*/, lesson_model_1.Lesson.findOne({ chatId: msg.chat.id })];
+                _c.trys.push([4, 9, , 11]);
+                return [4 /*yield*/, group_model_1.Group.findOne({ chatId: msg.chat.id })];
             case 5:
-                oldLesson = _a.sent();
-                if (oldLesson) {
-                    oldLesson.delete();
+                oldGroup = _c.sent();
+                if (oldGroup) {
+                    oldGroup.delete();
                 }
-                return [4 /*yield*/, new lesson_model_1.Lesson({
+                ii = arr[1].replace(/\s+/g, ' ').trim().split(" ");
+                lessons = ii[1].split('/');
+                for (i = 0; i < lessons.length; i++) {
+                    lessons[i] = (_a = {}, _a[lessons[i].split("-")[0]] = lessons[i].split("-")[1], _a);
+                }
+                webinars = ii[2].split('/');
+                for (i = 0; i < webinars.length; i++) {
+                    webinars[i] = (_b = {}, _b[webinars[i].split("-")[0]] = webinars[i].split("-")[1], _b);
+                }
+                holidays = ii[3].split('/');
+                holidayWeeksNumbers = [];
+                for (i = 0; i < holidays.length; i++) {
+                    currentMonday = moment_1.default().startOf('isoweek');
+                    momentDateHoliday = buildMomentDate(holidays[i]);
+                    for (j = 1; j < 78; j++) {
+                        if (currentMonday.add(7, "days").format("DD-MM-YYYY") === momentDateHoliday.format("DD-MM-YYYY")) {
+                            holidayWeeksNumbers.push(j + parseInt(ii[4]));
+                            break;
+                        }
+                    }
+                }
+                return [4 /*yield*/, new group_model_1.Group({
                         chatId: msg.chat.id,
                         groupName: ii[0],
-                        lessonDayOne: ii[1],
-                        lessonDayTwo: ii[2],
-                        webinarOne: ii[3],
-                        webinarTwo: ii[4],
-                        time: ii[5],
-                        holidayOne: ii[6],
-                        holidayTwo: ii[7],
-                        lessonNumber: parseInt(ii[8]),
-                        examNumber: ii[9]
+                        currentWeek: ii[4] - 1,
+                        lessons: lessons,
+                        webinars: webinars,
+                        holidays: holidays,
+                        holidayWeeksNumbers: holidayWeeksNumbers
                     })];
             case 6:
-                lesson = _a.sent();
-                lesson.save();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")];
+                group = _c.sent();
+                return [4 /*yield*/, group.save()];
             case 7:
-                send_1 = _a.sent();
+                _c.sent();
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")];
+            case 8:
+                send_1 = _c.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, send_1.message_id.toString());
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
                 }, 20000);
-                return [3 /*break*/, 10];
-            case 8:
-                err_1 = _a.sent();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Неверный ввод")];
+                return [3 /*break*/, 11];
             case 9:
-                _a.sent();
-                return [3 /*break*/, 10];
-            case 10: return [3 /*break*/, 13];
-            case 11:
+                err_1 = _c.sent();
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Неверный ввод")];
+            case 10:
+                _c.sent();
+                return [3 /*break*/, 11];
+            case 11: return [3 /*break*/, 14];
+            case 12:
                 funnyResponse = "\n<b>\u041A\u0430\u0442\u0430\u043D\u044B \u0437\u0432\u0443\u043A\u0438</b>\n<b>\u0421\u0430\u043C\u0443\u0440\u0430\u0439 \u043F\u0440\u043E\u043C\u0430\u0445\u043D\u0443\u043B\u0441\u044F</b>\n<b>\u0421\u044D\u043F\u043F\u0443\u043A\u0443 \u0432\u044B\u0445\u043E\u0434</b>\n        ";
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
-            case 12:
-                send_2 = _a.sent();
+            case 13:
+                send_2 = _c.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
                     bot.deleteMessage(msg.chat.id, send_2.message_id.toString());
                 }, 30000); // 30 секунд до удаления сообщения
-                _a.label = 13;
-            case 13: return [3 /*break*/, 16];
-            case 14: return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Ничего я не создам, пока я не админ")];
-            case 15:
-                _a.sent();
-                _a.label = 16;
-            case 16: return [2 /*return*/];
-        }
-    });
-}); });
-/**
- * Внесение изменений в нумерацию, можно поменять номер следующего занятия и следующей контрольной
- * НАПОМИНАНИЕ: добавить данное описание в инструкцию
- */
-bot.onText(/\/setup_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, admins, admin, i, typeAndNumber, lesson, err_2, funnyResponse, send_3;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                isBotAdmin = false;
-                return [4 /*yield*/, bot.getMe()];
-            case 1:
-                botId = _a.sent();
-                return [4 /*yield*/, bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-                        if (c.status == "administrator") {
-                            isBotAdmin = true;
-                        }
-                    })];
-            case 2:
-                _a.sent();
-                if (!isBotAdmin) return [3 /*break*/, 18];
-                return [4 /*yield*/, bot.getChatAdministrators(msg.chat.id)];
-            case 3:
-                admins = _a.sent();
-                admin = false;
-                for (i = 0; i < admins.length; i++) {
-                    if (admins[i].user.id === msg.from.id) {
-                        admin = true;
-                    }
-                }
-                if (!admin) return [3 /*break*/, 15];
-                _a.label = 4;
-            case 4:
-                _a.trys.push([4, 12, , 14]);
-                typeAndNumber = arr[1].replace(/\s+/g, ' ').trim().split(" ");
-                return [4 /*yield*/, lesson_model_1.Lesson.findOne({ chatId: msg.chat.id })];
-            case 5:
-                lesson = _a.sent();
-                if (!(typeAndNumber[0] === "lesson" && typeAndNumber.length === 2)) return [3 /*break*/, 7];
-                lesson.lessonNumber = typeAndNumber[1];
-                lesson.save();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u041D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0438\u0437\u043C\u0435\u043D\u0435\u043D \u043D\u0430 " + typeAndNumber[1])];
-            case 6:
-                _a.sent();
-                return [3 /*break*/, 11];
-            case 7:
-                if (!(typeAndNumber[0] === "exam" && typeAndNumber.length === 2)) return [3 /*break*/, 9];
-                lesson.examNumber = typeAndNumber[1];
-                lesson.save();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u041D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u043E\u0439 \u0438\u0437\u043C\u0435\u043D\u0435\u043D \u043D\u0430 " + typeAndNumber[1])];
-            case 8:
-                _a.sent();
-                return [3 /*break*/, 11];
-            case 9: return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Неверный ввод")];
-            case 10:
-                _a.sent();
-                _a.label = 11;
-            case 11: return [3 /*break*/, 14];
-            case 12:
-                err_2 = _a.sent();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Неверный ввод")];
-            case 13:
-                _a.sent();
-                return [3 /*break*/, 14];
+                _c.label = 14;
             case 14: return [3 /*break*/, 17];
-            case 15:
-                funnyResponse = "\n<b>\u041F\u0440\u0430\u0432\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435</b>\n<b>\u0421\u0451\u0433\u0443\u043D\u0430\u0442\u0443 \u0434\u0430\u043D\u043E \u043B\u0438\u0448\u044C</b>\n<b>\u0421\u0442\u0443\u043F\u0430\u0439 \u0447\u0435\u043B\u043E\u0432\u0435\u043A</b>\n        ";
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
-                        parse_mode: "HTML"
-                    })];
+            case 15: return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Ничего я не создам, пока я не админ")];
             case 16:
-                send_3 = _a.sent();
-                setTimeout(function () {
-                    bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-                    bot.deleteMessage(msg.chat.id, send_3.message_id.toString());
-                }, 30000); // 30 секунд до удаления сообщения
-                _a.label = 17;
-            case 17: return [3 /*break*/, 20];
-            case 18: return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")];
-            case 19:
-                _a.sent();
-                _a.label = 20;
-            case 20: return [2 /*return*/];
+                _c.sent();
+                _c.label = 17;
+            case 17: return [2 /*return*/];
         }
     });
 }); });
 /**
- * Установка даты последнего занятия, эта дата нужна для определения следующей контрольной, и эта дата сама устанавливается автоматически после оповещения о предстоящем занятии
- * Но этой функцией нужно установить дату Первого занятия новой группы в самом начале только для того, чтобы продемонстрировать группе
- * что можно проверять данные своей группы, с датой следующей контрольной, датами каникул, номеров занятий и контрольных и прочего
+ * Внесение изменений в нумерацию тущей недели
  */
-bot.onText(/\/putdate_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, admins, admin, i, lesson, err_3, funnyResponse, send_4;
+bot.onText(/\/setweek_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
+    var isBotAdmin, botId, admins, admin, i, group, holidays, holidayWeeksNumbers, i, currentMonday, momentDateHoliday, j, send_3, err_2, funnyResponse, send_4;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -514,26 +467,43 @@ bot.onText(/\/putdate_(.+)/, function (msg, arr) { return __awaiter(void 0, void
                 _a.label = 4;
             case 4:
                 _a.trys.push([4, 8, , 10]);
-                return [4 /*yield*/, lesson_model_1.Lesson.findOne({ chatId: msg.chat.id })];
+                return [4 /*yield*/, group_model_1.Group.findOne({ chatId: msg.chat.id })];
             case 5:
-                lesson = _a.sent();
-                lesson.dateOfLastLesson = arr[1];
-                return [4 /*yield*/, lesson.save()];
+                group = _a.sent();
+                holidays = group.holidays;
+                holidayWeeksNumbers = [];
+                for (i = 0; i < holidays.length; i++) {
+                    currentMonday = moment_1.default().startOf('isoweek');
+                    momentDateHoliday = buildMomentDate(holidays[i]);
+                    for (j = 1; j < 78; j++) {
+                        if (currentMonday.add(7, "days").format("DD-MM-YYYY") === momentDateHoliday.format("DD-MM-YYYY")) {
+                            holidayWeeksNumbers.push(j + parseInt(arr[1]));
+                            break;
+                        }
+                    }
+                }
+                group.currentWeek = arr[1];
+                group.holidayWeeksNumbers = holidayWeeksNumbers;
+                return [4 /*yield*/, group.save()];
             case 6:
                 _a.sent();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0414\u0430\u0442\u0430 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0430 \u043D\u0430 " + arr[1])];
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u041D\u043E\u043C\u0435\u0440 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u0438\u0437\u043C\u0435\u043D\u0435\u043D \u043D\u0430 " + arr[1] + ", \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u0443\u0434\u0430\u043B\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 10 \u0441\u0435\u043A\u0443\u043D\u0434")];
             case 7:
-                _a.sent();
+                send_3 = _a.sent();
+                setTimeout(function () {
+                    bot.deleteMessage(msg.chat.id, send_3.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, msg.message_id.toString());
+                }, 10000);
                 return [3 /*break*/, 10];
             case 8:
-                err_3 = _a.sent();
+                err_2 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Неверный ввод")];
             case 9:
                 _a.sent();
                 return [3 /*break*/, 10];
             case 10: return [3 /*break*/, 13];
             case 11:
-                funnyResponse = "\n<b>\u0427\u0438\u0441\u043B\u0430 \u043C\u0435\u043D\u044F\u0435\u0448\u044C</b>\n<b>\u0423\u0440\u043E\u043A\u0430 \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0442\u044B</b>\n<b>\u041B\u0443\u0447\u0448\u0435 \u043D\u0435 \u043D\u0430\u0434\u043E</b>\n        ";
+                funnyResponse = "\n<b>\u041F\u0440\u0430\u0432\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435</b>\n<b>\u0421\u0451\u0433\u0443\u043D\u0430\u0442\u0443 \u0434\u0430\u043D\u043E \u043B\u0438\u0448\u044C</b>\n<b>\u0421\u0442\u0443\u043F\u0430\u0439 \u0447\u0435\u043B\u043E\u0432\u0435\u043A</b>\n        ";
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
@@ -558,7 +528,7 @@ bot.onText(/\/putdate_(.+)/, function (msg, arr) { return __awaiter(void 0, void
  * Функция принимает все что написано после нижнего подчеркивания, можно написать что-угодно и это созранится в поле groupAdmin в группе
  */
 bot.onText(/\/setadmin_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, admins, admin, i, lesson, err_4, funnyResponse, send_5;
+    var isBotAdmin, botId, admins, admin, i, group, send_5, err_3, funnyResponse, send_6;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -587,19 +557,23 @@ bot.onText(/\/setadmin_(.+)/, function (msg, arr) { return __awaiter(void 0, voi
                 _a.label = 4;
             case 4:
                 _a.trys.push([4, 8, , 10]);
-                return [4 /*yield*/, lesson_model_1.Lesson.findOne({ chatId: msg.chat.id })];
+                return [4 /*yield*/, group_model_1.Group.findOne({ chatId: msg.chat.id })];
             case 5:
-                lesson = _a.sent();
-                lesson.groupAdmin = arr[1];
-                return [4 /*yield*/, lesson.save()];
+                group = _a.sent();
+                group.groupAdmin = arr[1];
+                return [4 /*yield*/, group.save()];
             case 6:
                 _a.sent();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0410\u0434\u043C\u0438\u043D \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u044B " + arr[1])];
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0410\u0434\u043C\u0438\u043D \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u044B " + arr[1] + ", \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u0443\u0434\u0430\u043B\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 10 \u0441\u0435\u043A\u0443\u043D\u0434")];
             case 7:
-                _a.sent();
+                send_5 = _a.sent();
+                setTimeout(function () {
+                    bot.deleteMessage(msg.chat.id, send_5.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, msg.message_id.toString());
+                }, 10000);
                 return [3 /*break*/, 10];
             case 8:
-                err_4 = _a.sent();
+                err_3 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Неверный ввод")];
             case 9:
                 _a.sent();
@@ -611,10 +585,10 @@ bot.onText(/\/setadmin_(.+)/, function (msg, arr) { return __awaiter(void 0, voi
                         parse_mode: "HTML"
                     })];
             case 12:
-                send_5 = _a.sent();
+                send_6 = _a.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-                    bot.deleteMessage(msg.chat.id, send_5.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, send_6.message_id.toString());
                 }, 30000); // 30 секунд до удаления сообщения
                 _a.label = 13;
             case 13: return [3 /*break*/, 16];
@@ -630,7 +604,7 @@ bot.onText(/\/setadmin_(.+)/, function (msg, arr) { return __awaiter(void 0, voi
  * Получение инструкций, команда скрыта, нужно писать ее через / без единой ошибки, если студенты получат к ней доступ, то могут сломать бота
  */
 bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, isPrivate, admins, admin, i, text, err_5, funnyResponse, send_6;
+    var isBotAdmin, botId, isPrivate, admins, admin, i, text, err_4, funnyResponse, send_7;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -661,7 +635,7 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(vo
                 _a.label = 4;
             case 4:
                 _a.trys.push([4, 6, , 8]);
-                text = " \n        <strong>----------------------------------------------------------------</strong>\n        \n        <b>\u041F\u0440\u0438\u0432\u0435\u0442 \u0434\u043E\u0440\u043E\u0433\u043E\u0439 \u0441\u043E\u0437\u0434\u0430\u0442\u0435\u043B\u044C \u0433\u0440\u0443\u043F\u043F\u044B!</b>\n\n        \n        <pre>\u042D\u0442\u043E \u0438\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044F \u043F\u043E \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044E \u0433\u0440\u0443\u043F\u043F\u044B \u0434\u043B\u044F \u043E\u043F\u043E\u0432\u0435\u0449\u0435\u043D\u0438\u044F \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u043E\u0432 \u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F\u0445, \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u044B\u0445, \u043E\u043F\u043B\u0430\u0442\u0430\u0445 \u0438 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u0430\u0445</pre>\n        <pre>\u0412\u0441\u0435 \u0447\u0442\u043E \u043D\u0443\u0436\u043D\u043E \u0441\u0434\u0435\u043B\u0430\u0442\u044C \u044D\u0442\u043E \u0432\u0432\u0435\u0441\u0442\u0438 <b>/build_</b> \u0437\u0430\u0442\u0435\u043C \u043D\u0435 \u0441\u0442\u0430\u0432\u044F \u043F\u0440\u043E\u0431\u0435\u043B \u0432\u0432\u0435\u0441\u0442\u0438 \u043F\u0435\u0440\u0432\u044B\u0439 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440, \u0438 \u0437\u0430\u0442\u0435\u043C \u0443\u0436\u0435 \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B\u044B \u0432\u0441\u0435 \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u043F\u0430\u0440\u043C\u0430\u0435\u0442\u0440\u044B.</pre>\n        <pre>\u0412\u0441\u0435\u0433\u043E \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u043E\u0432 9 \u0448\u0442\u0443\u043A. \u041D\u043E \u043D\u0435 \u043F\u0443\u0433\u0430\u0439\u0442\u0435\u0441\u044C, \u0432\u044B \u0432\u0441\u0435\u0433\u0434\u0430 \u043C\u043E\u0436\u0435\u0442\u0435 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B \u0438 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u0435\u0435; \u0442\u043E \u0435\u0441\u0442\u044C \u043F\u0440\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0438 \u043A\u043E\u043C\u0430\u043D\u0434\u044B <b>/build_</b> \u0441\u043E \u0432\u0441\u0435\u043C\u0438 \u043F\u0430\u0440\u043C\u0435\u0442\u0440\u0430\u043C\u0438 \u0443\u0434\u0430\u043B\u0438\u0442 \u0441\u0442\u0430\u0440\u0443\u044E \u0437\u0430\u043F\u0438\u0441\u044C \u0438 \u0441\u043E\u0437\u0434\u0430\u0441\u0442 \u043D\u043E\u0432\u0443\u044E</pre>\n        \n        <b>\u041A\u0430\u043A\u0438\u0435 \u0435\u0441\u0442\u044C \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B:</b>\n        \n        <b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B:</b><pre>\u041F\u0438\u0448\u0438\u0442\u0435 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435 \u0431\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B\u043E\u0432 \u0432 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0438</pre>\n        <b>\u0414\u0435\u043D\u044C \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043D\u043E\u043C\u0435\u0440 1:</b><pre>\u041F\u0438\u0448\u0438\u0442\u0435 \u0447\u0438\u0441\u043B\u043E\u043C 1 \u044D\u0442\u043E \u043F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A, 2 \u0432\u0442\u043E\u0440\u043D\u0438\u043A</pre>\n        <b>\u0414\u0435\u043D\u044C \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043D\u043E\u043C\u0435\u0440 2:</b><pre>\u0422\u0430\u043A\u0436\u0435 \u0447\u0438\u0441\u043B\u043E\u043C 4 \u044D\u0442\u043E \u0447\u0435\u0442\u0432\u0435\u0440\u0433, 5 \u043F\u044F\u0442\u043D\u0438\u0446\u0430</pre>\n        <b>\u0414\u0435\u043D\u044C \u0432\u0435\u0431\u0438\u043D\u0430\u0440\u0430 \u043D\u043E\u043C\u0435\u0440 1:</b><pre>\u041F\u0438\u0448\u0435\u043C \u043D\u043E\u043C\u0435\u0440 \u0434\u043D\u044F, \u0433\u0434\u0435 1 \u044D\u0442\u043E \u043F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A, 2 \u0432\u0442\u043E\u0440\u043D\u0438\u043A \u0438 \u0442\u0434, \u0438\u043D\u0430\u0447\u0435 \u043F\u0438\u0448\u0435\u043C null</pre>\n        <b>\u0414\u0435\u043D\u044C \u0432\u0435\u0431\u0438\u043D\u0430\u0440\u0430 \u043D\u043E\u043C\u0435\u0440 2:</b><pre>\u0422\u043E\u0436\u0435 \u0441\u0430\u043C\u043E\u0435, \u0447\u0442\u043E \u0438 \u0434\u043B\u044F \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0434\u043D\u044F \u0432\u0435\u0431\u0438\u043D\u0430\u0440\u0430, \u0441\u0442\u0430\u0432\u0438\u043C \u0447\u0438\u0441\u043B\u043E \u0441\u043E\u043E\u0442\u0432\u0435\u0442\u0441\u0432\u0435\u043D\u043D\u043E \u0434\u043D\u044F \u043D\u0435\u0434\u0435\u043B\u0438, \u043B\u0438\u0431\u043E \u043F\u0440\u043E\u0441\u0442\u043E \u043F\u0438\u0448\u0435\u043C null</pre>\n        <b>\u0412\u0440\u0435\u043C\u044F \u0437\u0430\u043D\u044F\u0442\u0438\u0439:</b><pre>\u0415\u0441\u0442\u044C \u0434\u0432\u0430 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430 \u043B\u0438\u0431\u043E evening \u043B\u0438\u0431\u043E lunch, \u0432\u0435\u0447\u0435\u0440\u043D\u044F\u044F \u0438 \u0434\u043D\u0435\u0432\u043D\u0430\u044F \u0433\u0440\u0443\u043F\u043F\u044B \u0441\u043E\u043E\u0442\u0432\u0435\u0442\u0441\u0432\u0435\u043D\u043D\u043E</pre>\n        <b>\u0414\u0430\u0442\u0430 \u043F\u0435\u0440\u0432\u044B\u0445 \u043A\u0430\u043D\u0438\u043A\u0443\u043B:</b><pre>\u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u0434\u0430\u0442\u0443 \u0432 \u0444\u043E\u0440\u043C\u0430\u0442\u0435 dd-mm-yyyy (\u043E\u0442 \u044D\u0442\u043E\u0439 \u0434\u0430\u0442\u044B \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044F \u043D\u0435\u0434\u0435\u043B\u044F \u043A\u0430\u043D\u0438\u043A\u0443\u043B)</pre>\n        <b>\u0414\u0430\u0442\u0430 \u0432\u0442\u043E\u0440\u044B\u0445 \u043A\u0430\u043D\u0438\u043A\u0443\u043B:</b><pre>\u0422\u0430\u043A\u0436\u0435 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0434\u0430\u0442\u0443 \u0432 \u0444\u043E\u0440\u043C\u0430\u0442\u0435 dd-mm-yyyy</pre>\n        <b>\u041D\u043E\u043C\u0435\u0440 \u0442\u0435\u043A\u0443\u0449\u0435\u0433\u043E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F:</b><pre>\u041F\u0440\u043E\u0441\u0442\u043E \u043D\u043E\u043C\u0435\u0440 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0447\u0438\u0441\u043B\u043E\u043C</pre>\n        <b>\u041D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u043E\u0439:</b><pre>\u0422\u0430\u043A\u0436\u0435 \u043F\u0440\u043E\u0441\u0442\u043E \u043D\u043E\u043C\u0435\u0440 \u0447\u0438\u0441\u043B\u043E\u043C \u0443\u043A\u0430\u0436\u0438\u0442\u0435</pre>\n        \n        <b>\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 \u043C\u044B \u0441\u043E\u0437\u0434\u0430\u0435\u043C \u0433\u0440\u0443\u043F\u043F\u0443 JS-5 \u0441 \u0437\u0430\u043D\u044F\u0442\u0438\u044F\u043C\u0438 \u043F\u043E \u043F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A\u0430\u043C \u0438 \u0447\u0435\u0442\u0432\u0435\u0440\u0433\u0430\u043C, \u0432\u0435\u0431\u0438\u043D\u0430\u0440\u0430\u043C\u0438 \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E \u0441\u0440\u0435\u0434\u0430\u043C, \u0443\u0447\u0435\u0431\u043E\u0439 \u0432 \u0434\u043D\u0435\u0432\u043D\u043E\u0435 \u0432\u0440\u0435\u043C\u044F, \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u0430\u043C\u0438 \u043D\u0430 \u043D\u043E\u0432\u044B\u0439 \u0433\u043E\u0434 \u0438 \u043D\u0435\u0434\u0435\u043B\u0435\u0439 \u0432 \u0430\u0432\u0433\u0443\u0441\u0442\u0435 (15 \u0447\u0438\u0441\u043B\u0430), \u0441 \u0441\u0430\u043C\u044B\u043C \u043F\u0435\u0440\u0432\u044B\u043C \u0437\u0430\u043D\u044F\u0442\u0438\u0435\u043C \u0438 \u043F\u0435\u0440\u0432\u043E\u0439 \u043F\u0440\u0435\u0434\u0441\u0442\u043E\u044F\u0449\u0435\u0439 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u043E\u0439:</b>\n        <pre>/build_JS-5 1 4 3 null lunch 27-12-2020 15-08-2021 1 1</pre>\n        \n        <pre>\u0413\u043E\u0442\u043E\u0432\u043E))</pre>\n        \n        <b>PS:</b>\n        \n        <pre>\u0412\u044B \u0442\u0430\u043A\u0436\u0435 \u043C\u043E\u0436\u0435\u0442\u0435 \u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0438\u043B\u0438 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u043E\u0439, \u0432\u0432\u043E\u0434\u0438\u0442\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 /setup_ \u0438 \u0437\u0430\u0442\u0435\u043C exam \u0438\u043B\u0438 lesson \u0438 \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B \u043D\u0430 \u043A\u0430\u043A\u043E\u0439 \u043D\u043E\u043C\u0435\u0440 \u0432\u044B \u0445\u043E\u0442\u0438\u0442\u0435 \u043F\u043E\u043C\u0435\u043D\u044F\u0442\u044C.</pre>\n        <pre>\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, /setup_lesson 83 \u043C\u044B \u043C\u0435\u043D\u044F\u0435\u043C \u043D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043D\u0430 83, \u0438\u043B\u0438 /setup_exam 9 \u043C\u044B \u0441\u0442\u0430\u0432\u0438\u043C \u043D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u043E\u0439 9</pre>\n        \n        <b>PPS:</b>\n        \n        <pre>\u041C\u043E\u0436\u043D\u043E \u0443\u043A\u0430\u0437\u0430\u0442\u044C \u0430\u0434\u043C\u0438\u043D\u0430 \u0433\u0440\u0443\u043F\u043F\u044B \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E /setadmin_ , \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u0438\u0437 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u0440\u0435\u0448\u0430\u0435\u0442 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0433\u0440\u0443\u043F\u043F\u044B, \u0438 \u0447\u044C\u0438 \u0434\u0430\u043D\u043D\u044B\u0435 \u0438 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u044B \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442\u0441\u044F \u0432 \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0442\u0438\u0432\u043D\u044B\u0445 \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u044F\u0445.</pre>\n        <pre>\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, /setadmin_Nazira +7(777)777-77-77 @Nazira \u043C\u044B \u0441\u0442\u0430\u0432\u0438\u043C \u0430\u0434\u043C\u0438\u043D\u043E\u043C \u0433\u0440\u0443\u043F\u043F\u044B \u041D\u0430\u0437\u0438\u0440\u0443 \u0438 \u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u043C \u0435\u0435 \u043D\u043E\u043C\u0435\u0440 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0430 \u0438 \u0438\u043C\u044F \u0432 \u0442\u0435\u043B\u0435\u0433\u0435. \u043F\u0438\u0441\u0430\u0442\u044C \u043C\u043E\u0436\u043D\u043E \u0447\u0442\u043E \u0443\u0433\u043E\u0434\u043D\u043E, \u0445\u043E\u0442\u044C \u043F\u0440\u043E\u0441\u0442\u043E \u0438\u043C\u044F, \u0445\u043E\u0442\u044C \u0441 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0430\u043C\u0438 \u0438\u043C\u044F, \u0445\u043E\u0442\u044C \u0445\u0430\u0440\u0430\u043A\u0442\u0435\u0440\u0438\u0441\u0442\u0438\u043A\u0443 \u0430\u0434\u043C\u0438\u043D\u0430))</pre>\n        \n        <b>PPPS:</b>\n        \n        <pre>\u0415\u0449\u0435 \u043C\u043E\u0436\u043D\u043E \u043C\u0435\u043D\u044F\u0442\u044C \u0434\u0430\u0442\u0443 \u0442\u0435\u043A\u0443\u0449\u0435\u0433\u043E (\u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0433\u043E, \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E, \u044D\u0442\u043E \u0432\u0441\u0435 \u043E\u0434\u043D\u043E \u0438 \u0442\u043E \u0436\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u043D\u0430 \u0441\u0430\u043C\u043E\u043C \u0434\u0435\u043B\u0435) \u0437\u0430\u043D\u044F\u0442\u0438\u044F, \u044D\u0442\u043E \u0441\u043A\u043E\u0440\u0435\u0435 \u0432\u0441\u0435\u0433\u043E \u043F\u043E\u043D\u0430\u0434\u043E\u0431\u0438\u0442\u0441\u044F \u0441\u0434\u0435\u043B\u0430\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u0434\u0438\u043D \u0440\u0430\u0437 (\u0438 \u0442\u043E, \u0435\u0441\u043B\u0438 \u044D\u0442\u043E\u0433\u043E \u043D\u0435 \u0441\u0434\u0435\u043B\u0430\u0442\u044C \u0432\u0441\u0435 \u0441\u0430\u043C\u043E \u0441\u043E\u0431\u043E\u0439 \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0443\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F) \u0434\u043B\u044F \u0434\u0435\u043C\u043E\u043D\u0441\u0442\u0440\u0430\u0446\u0438\u0438 \u043D\u0430 \u043E\u0440\u0438\u0435\u043D\u0442\u0430\u0446\u0438\u0438</pre>\n        <pre>\u041D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 /putdate_ \u0438 \u0441\u0440\u0430\u0437\u0443 \u0431\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B\u0430 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0434\u0430\u0442\u0443 \u0434\u043B\u044F \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F. \u041D\u0430 \u043E\u0440\u0438\u0435\u043D\u0442\u0430\u0446\u0438\u0438 \u044D\u0442\u043E \u0431\u0443\u0434\u0435\u0442 \u0434\u0430\u0442\u0430 \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043A\u0441\u0442\u0430\u0442\u0438, \u0442\u0430\u043A \u043A\u0430\u043A \u0441\u0447\u0435\u0442 \u0438\u0434\u0435\u0442 \u0441 1, \u0438 \u043E\u0442 \u044D\u0442\u043E\u0439 \u0434\u0430\u0442\u044B \u0438 \u043E\u0442 \u044D\u0442\u043E\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u0440\u043E\u0438\u0437\u043E\u0439\u0434\u0435\u0442 \u0440\u0430\u0441\u0447\u0435\u0442 \u0434\u0430\u0442\u044B \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u043E\u0439!</pre>\n        <pre>\u0414\u0430\u0442\u0443 \u043F\u0438\u0448\u0435\u043C \u0432 \u0444\u043E\u0440\u043C\u0430\u0442\u0435 dd-mm-yyyy</pre>\n        <pre>\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, /putdate_20-04-2021 \u0437\u043D\u0430\u0447\u0438\u0442, \u0447\u0442\u043E \u0434\u0430\u0442\u0430 \"\u0442\u0435\u043A\u0443\u0449\u0435\u0433\u043E\" \u0437\u0430\u043D\u044F\u0442\u0438\u044F 20 \u0430\u043F\u0440\u0435\u043B\u044F 2021 \u0433\u043E\u0434\u0430</pre>\n        <pre>\u041A\u043E\u0440\u043E\u0447\u0435, \u043F\u0440\u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0438 \u0433\u0440\u0443\u043F\u043F\u044B \u043C\u044B \u0436\u0435 \u0432 \u043A\u043E\u043C\u0430\u043D\u0434\u0435 /build_ \u0432 \u043A\u043E\u043D\u0446\u0435 \u043D\u0430\u043F\u0438\u0448\u0435\u043C 1 1 \u0442\u0430\u043A \u043A\u0430\u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u0435 1 \u0438 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F 1. \u0422\u0430\u043A \u0432\u043E\u0442 \u0434\u043B\u044F \u0432\u043E\u0442 \u044D\u0442\u043E\u0433\u043E 1 (\u043F\u0435\u0440\u0432\u043E\u0433\u043E) \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043D\u0443\u0436\u043D\u043E \u0443\u043A\u0430\u0437\u0430\u0442\u044C \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0443\u044E \u0434\u0430\u0442\u0443, \u043A\u043E\u0433\u0434\u0430 \u044D\u0442\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u0431\u0443\u0434\u0435\u0442 \u0438 \u0432\u0441\u0435)))</pre>\n        \n         <b>PPPPS:</b>\n         <pre>\u0427\u0442\u043E\u0431\u044B \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0432\u0441\u0435\u0445 \u0433\u0440\u0443\u043F\u043F, \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 /allgroups \u0432 \u043B\u0438\u0447\u043D\u043E\u0439 \u043F\u0435\u0440\u0435\u043F\u0438\u0441\u043A\u0435 \u0441 \u0431\u043E\u0442\u043E\u043C</pre>\n         \n         <b>PPPPPS:</b>\n         <pre>\u0427\u0442\u043E\u0431\u044B \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0433\u0440\u0443\u043F\u043F\u0443, \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0445\u043E\u0442\u044C \u043B\u0438\u0447\u043D\u043E, \u0445\u043E\u0442\u044C \u0432 \u0433\u0440\u0443\u043F\u043F\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 /delete_ \u0437\u0430\u0442\u0435\u043C id \u0433\u0440\u0443\u043F\u043F\u044B (\u043C\u043E\u0436\u043D\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E /allgroups) \u0438 \u0437\u0430\u0442\u0435\u043C \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B \u043F\u0430\u0440\u043E\u043B\u044C, \u043F\u0430\u0440\u043E\u043B\u044C \u0437\u043D\u0430\u044E\u0442 \u0430\u0434\u043C\u0438\u043D\u044B</pre>\n         <pre>\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u0442\u043E-\u0442\u043E \u0441\u043E\u0437\u0434\u0430\u043B \u043B\u0435\u0432\u0443\u044E \u043D\u0435\u043D\u0443\u0436\u043D\u0443\u044E \u0438\u043B\u0438 \u0442\u0435\u0441\u0442\u043E\u0432\u0443\u044E \u0433\u0440\u0443\u043F\u043F\u0443 \u0441 id 608ce9694d1311418c93ec9f</pre>\n         <pre>\u0427\u0442\u043E\u0431\u044B \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u044D\u0442\u0443 \u0433\u0440\u0443\u043F\u043F\u0443 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 /delete_608ce9694d1311418c93ec9f ****** (\u0433\u0434\u0435 ****** \u044D\u0442\u043E \u043F\u0430\u0440\u043E\u043B\u044C)</pre>\n\n                                            <pre>           &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774;</pre>\n        \n        <strong>----------------------------------------------------------------</strong>\n";
+                text = "\n                     <strong>----------------------------------------------------------------</strong>\n        \n        <b>\u041F\u0440\u0438\u0432\u0435\u0442 \u0434\u043E\u0440\u043E\u0433\u043E\u0439 \u0441\u043E\u0437\u0434\u0430\u0442\u0435\u043B\u044C \u0433\u0440\u0443\u043F\u043F\u044B!</b>\n\n        \n        <pre>\u042D\u0442\u043E \u0438\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044F \u043F\u043E \u0441\u043E\u0437\u0434\u0430\u043D\u0438\u044E \u0433\u0440\u0443\u043F\u043F\u044B \u0434\u043B\u044F \u043E\u043F\u043E\u0432\u0435\u0449\u0435\u043D\u0438\u044F \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u043E\u0432 \u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F\u0445, \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u044B\u0445, \u043E\u043F\u043B\u0430\u0442\u0430\u0445 \u0438 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u0430\u0445</pre>\n        <pre>\u0412\u0441\u0435 \u0447\u0442\u043E \u043D\u0443\u0436\u043D\u043E \u0441\u0434\u0435\u043B\u0430\u0442\u044C \u044D\u0442\u043E \u0432\u0432\u0435\u0441\u0442\u0438 <b>/build_</b> \u0437\u0430\u0442\u0435\u043C \u043D\u0435 \u0441\u0442\u0430\u0432\u044F \u043F\u0440\u043E\u0431\u0435\u043B \u0432\u0432\u0435\u0441\u0442\u0438 \u043F\u0435\u0440\u0432\u044B\u0439 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440, \u0438 \u0437\u0430\u0442\u0435\u043C \u0443\u0436\u0435 \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B\u044B \u0432\u0441\u0435 \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B.</pre>\n        <pre>\u0427\u0442\u043E\u0431\u044B \u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435 \u043C\u043E\u0436\u043D\u043E \u0432\u0432\u0435\u0441\u0442\u0438 <b>/show</b> \u0432 \u0447\u0430\u0442\u0435 \u0433\u0440\u0443\u043F\u043F\u044B \u0438 \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0447\u0442\u043E \u043A \u0447\u0435\u043C\u0443.</pre>\n        <pre>\u0412\u0441\u0435\u0433\u043E \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u043E\u0432 5 \u0448\u0442\u0443\u043A. \u041D\u043E \u043D\u0435 \u043F\u0443\u0433\u0430\u0439\u0442\u0435\u0441\u044C, \u0432\u044B \u0432\u0441\u0435\u0433\u0434\u0430 \u043C\u043E\u0436\u0435\u0442\u0435 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B \u0438 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u0435\u0435; \u0442\u043E \u0435\u0441\u0442\u044C \u043F\u0440\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0438 \u043A\u043E\u043C\u0430\u043D\u0434\u044B <b>/build_</b> \u0441\u043E \u0432\u0441\u0435\u043C\u0438 \u043F\u0430\u0440\u043C\u0435\u0442\u0440\u0430\u043C\u0438 \u0443\u0434\u0430\u043B\u0438\u0442 \u0441\u0442\u0430\u0440\u0443\u044E \u0437\u0430\u043F\u0438\u0441\u044C \u0438 \u0441\u043E\u0437\u0434\u0430\u0441\u0442 \u043D\u043E\u0432\u0443\u044E</pre>\n        \n        <b>\u041A\u0430\u043A\u0438\u0435 \u0435\u0441\u0442\u044C \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B:</b>\n        \n        <b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B:</b><pre>\u041F\u0438\u0448\u0438\u0442\u0435 \u0438\u043C\u044F \u0431\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B\u043E\u0432 \u0432 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0438</pre>\n        <b>\u0414\u043D\u0438 \u0438 \u0432\u0440\u0435\u043C\u044F \u0437\u0430\u043D\u044F\u0442\u0438\u0439:</b><pre>\u041F\u0438\u0448\u0438\u0442\u0435 \u0447\u0438\u0441\u043B\u043E\u043C \u0434\u0435\u043D\u044C \u043D\u0435\u0434\u0435\u043B\u0438, \u0433\u0434\u0435 1 \u044D\u0442\u043E \u043F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A, \u0437\u0430\u0442\u0435\u043C \u0442\u0438\u0440\u0435 (-) \u0438 \u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F \u0437\u0430\u043D\u044F\u0442\u0438\u0439 \u0432 \u043B\u044E\u0431\u043E\u043C \u0444\u043E\u0440\u043C\u0430\u0442\u0435 \u0431\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B\u0430, \u0434\u0430\u043B\u0435\u0435 \u0441\u043B\u044D\u0448 (/) \u0438 \u0434\u0440\u0443\u0433\u043E\u0439 \u0434\u0435\u043D\u044C \u0437\u0430\u043D\u044F\u0442\u0438\u0439 \u0438 \u0432\u0440\u0435\u043C\u044F, \u0442\u0430\u043A \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0443\u0433\u043E\u0434\u043D\u043E \u0434\u043D\u0435\u0439</pre>\n        <b>\u0414\u043D\u0438 \u0438 \u0432\u0440\u0435\u043C\u044F \u0432\u0435\u0431\u0438\u043D\u0430\u0440\u043E\u0432:</b><pre>\u0422\u043E\u0436\u0435 \u0441\u0430\u043C\u043E\u0435, \u0447\u0442\u043E \u0438 \u0434\u043B\u044F \u0437\u0430\u043D\u044F\u0442\u0438\u0439, \u0442\u043E\u0447\u043D\u043E \u0442\u0430\u043A\u0436\u0435 \u043F\u0438\u0448\u0438\u0442\u0435 \u0434\u043D\u0438 \u0438 \u0432\u0440\u0435\u043C\u044F \u0447\u0435\u0440\u0435\u0437 \u0442\u0438\u0440\u0435 (-) \u0438 \u0441\u043B\u044D\u0448\u0438 (/)</pre>\n        <b>\u0414\u0430\u0442\u044B \u043A\u0430\u043D\u0438\u043A\u0443\u043B:</b><pre>\u041F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0444\u043E\u0440\u043C\u0430\u0442\u0435 dd-mm-yyyy \u0438 \u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0441\u043B\u044D\u0448 (/) \u043C\u0435\u0436\u0434\u0443 \u0434\u0430\u0442\u0430\u043C\u0438, \u0434\u0430\u0442 \u043A\u0430\u043D\u0438\u043A\u0443\u043B \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0443\u0433\u043E\u0434\u043D\u043E</pre>\n        <b>\u041D\u043E\u043C\u0435\u0440 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438:</b><pre>\u0415\u0441\u043B\u0438 \u0432\u044B \u0437\u0430\u0440\u0430\u043D\u0435\u0435 \u0441\u043E\u0437\u0434\u0430\u0435\u0442\u0435 \u0433\u0440\u0443\u043F\u043F\u0443, \u0442\u043E \u0443\u043A\u0430\u0436\u0438\u0442\u0435 0, \u0447\u0442\u043E\u0431\u044B \u0441 \u043F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A\u0430 \u043D\u0430\u0447\u0430\u043B\u0430\u0441\u044C \u043F\u0435\u0440\u0432\u0430\u044F \u043D\u0435\u0434\u0435\u043B\u044F \u0443\u0447\u0435\u0431\u044B))</pre>\n        \n        <b>\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 \u043C\u044B \u0441\u043E\u0437\u0434\u0430\u0435\u043C \u0433\u0440\u0443\u043F\u043F\u0443 JS-5 \u0441 \u0437\u0430\u043D\u044F\u0442\u0438\u044F\u043C\u0438 \u043F\u043E \u043F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A\u0430\u043C \u0432 16:00 \u0438 \u0447\u0435\u0442\u0432\u0435\u0440\u0433\u0430\u043C \u0432 19:30, \u0432\u0435\u0431\u0438\u043D\u0430\u0440\u0430\u043C\u0438 \u043F\u043E \u0432\u0442\u043E\u0440\u043D\u0438\u043A\u0430\u043C \u0432 11:00 \u0438 \u043F\u043E \u0441\u0443\u0431\u0431\u043E\u0442\u0430\u043C \u0432 17:00, \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u0430\u043C\u0438 \u043D\u0430 \u043D\u043E\u0432\u044B\u0439 \u0433\u043E\u0434 \u0438 \u043D\u0435\u0434\u0435\u043B\u0435\u0439 \u0432 \u0430\u0432\u0433\u0443\u0441\u0442\u0435 (15 \u0447\u0438\u0441\u043B\u0430), \u0438 \u044D\u0442\u043E \u043F\u0435\u0440\u0432\u0430\u044F \u043D\u0435\u0434\u0435\u043B\u044F \u0443\u0447\u0435\u0431\u044B</b>\n        <pre>/build_JS-5 1-16:00/4-19:30 2-11:00/6-17:00 27-12-2020/15-08-2021 1</pre>\n        \n        <pre>\u0413\u043E\u0442\u043E\u0432\u043E))</pre>\n        \n        <b>PS:</b>\n        \n        <pre>\u0412\u044B \u0442\u0430\u043A\u0436\u0435 \u043C\u043E\u0436\u0435\u0442\u0435 \u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043D\u043E\u043C\u0435\u0440 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438, \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E \u043A\u043E\u043C\u0430\u043D\u0434\u044B /setweek_.</pre>\n        <pre>\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, /setweek_3 \u043C\u044B \u043C\u0435\u043D\u044F\u0435\u043C \u0442\u0435\u043A\u0443\u0449\u0443\u044E \u043D\u0435\u0434\u0435\u043B\u044E \u043D\u0430 3 (\u0441\u0447\u0438\u0442\u0430\u0442\u044C \u043D\u0435\u0434\u0435\u043B\u044E \u043F\u0440\u043E\u0441\u0442\u043E, \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u043D\u043E\u043C\u0435\u0440 \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0433\u043E \u043D\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u0439 \u0432 \u043D\u0435\u0434\u0435\u043B\u0435, \u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440 \u0437\u0430\u043D\u044F\u0442\u0438\u0435 22 \u043F\u0440\u0438 \u0434\u0432\u0443\u0445 \u0437\u0430\u043D\u044F\u0442\u0438\u044F\u0445 \u0432 \u043D\u0435\u0434\u0435\u043B\u044E, \u044D\u0442\u043E 11 \u043D\u0435\u0434\u0435\u043B\u044F \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u044F)))</pre>\n        \n        <b>PPS:</b>\n        \n        <pre>\u041C\u043E\u0436\u043D\u043E \u0443\u043A\u0430\u0437\u0430\u0442\u044C \u0430\u0434\u043C\u0438\u043D\u0430 \u0433\u0440\u0443\u043F\u043F\u044B \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E /setadmin_ </pre>\n        <pre>\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, /setadmin_Nazira +7(777)777-77-77 @Nazira \u043C\u044B \u0441\u0442\u0430\u0432\u0438\u043C \u0430\u0434\u043C\u0438\u043D\u043E\u043C \u0433\u0440\u0443\u043F\u043F\u044B \u041D\u0430\u0437\u0438\u0440\u0443 \u0441 \u043A\u0430\u043A\u0438\u043C\u0438 \u0442\u043E \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u043D\u044B\u043C\u0438 \u0434\u0430\u043D\u043D\u044B\u043C\u0438.</pre>\n        \n        <b>PPPS:</b>\n        <pre>\u0427\u0442\u043E\u0431\u044B \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0432\u0441\u0435\u0445 \u0433\u0440\u0443\u043F\u043F, \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 /allgroups \u0432 \u043B\u0438\u0447\u043D\u043E\u0439 \u043F\u0435\u0440\u0435\u043F\u0438\u0441\u043A\u0435 \u0441 \u0431\u043E\u0442\u043E\u043C</pre>\n         \n        <b>PPPPS:</b>\n        <pre>\u0427\u0442\u043E\u0431\u044B \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0433\u0440\u0443\u043F\u043F\u0443, \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0445\u043E\u0442\u044C \u043B\u0438\u0447\u043D\u043E, \u0445\u043E\u0442\u044C \u0432 \u0433\u0440\u0443\u043F\u043F\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u0443 /delete_ \u0437\u0430\u0442\u0435\u043C id \u0433\u0440\u0443\u043F\u043F\u044B (\u043C\u043E\u0436\u043D\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E /allgroups) \u0438 \u0437\u0430\u0442\u0435\u043C \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0435\u043B \u043F\u0430\u0440\u043E\u043B\u044C, \u043F\u0430\u0440\u043E\u043B\u044C \u0437\u043D\u0430\u044E\u0442 \u0430\u0434\u043C\u0438\u043D\u044B</pre>\n        <pre>\u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u0442\u043E-\u0442\u043E \u0441\u043E\u0437\u0434\u0430\u043B \u043B\u0435\u0432\u0443\u044E \u043D\u0435\u043D\u0443\u0436\u043D\u0443\u044E \u0438\u043B\u0438 \u0442\u0435\u0441\u0442\u043E\u0432\u0443\u044E \u0433\u0440\u0443\u043F\u043F\u0443 \u0441 id 608ce9694d1311418c93ec9f</pre>\n        <pre>\u0427\u0442\u043E\u0431\u044B \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u044D\u0442\u0443 \u0433\u0440\u0443\u043F\u043F\u0443 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 /delete_608ce9694d1311418c93ec9f ****** (\u0433\u0434\u0435 ****** \u044D\u0442\u043E \u043F\u0430\u0440\u043E\u043B\u044C)</pre>\n\n                                            <pre>           &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774; &#9774;</pre>\n        \n        <strong>----------------------------------------------------------------</strong>\n                    ";
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, text, {
                         parse_mode: "HTML"
                     })];
@@ -669,7 +643,7 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(vo
                 _a.sent();
                 return [3 /*break*/, 8];
             case 6:
-                err_5 = _a.sent();
+                err_4 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")];
             case 7:
                 _a.sent();
@@ -681,10 +655,10 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(vo
                         parse_mode: "HTML"
                     })];
             case 10:
-                send_6 = _a.sent();
+                send_7 = _a.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-                    bot.deleteMessage(msg.chat.id, send_6.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, send_7.message_id.toString());
                 }, 15000); // 15 секунд до удаления сообщения
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
@@ -706,7 +680,7 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(vo
  * Сообщение автоматически удаляется спустя некоторое время
  */
 bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, lesson, dif_1, arrWithRestDays, result_1, nextSaturdaySimpleDate, monthBeforeExam, holidayOne, holidayTwo, text, send_7, err_6;
+    var isBotAdmin, botId, group_1, thisWeekSaturday, diff, i, examSaturday, weekDays_1, text, _loop_1, i, _loop_2, i, i, send_8, err_5;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -725,45 +699,53 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
                 _a.label = 3;
             case 3:
                 _a.trys.push([3, 6, , 8]);
-                return [4 /*yield*/, lesson_model_1.Lesson.findOne({ chatId: msg.chat.id })];
+                return [4 /*yield*/, group_model_1.Group.findOne({ chatId: msg.chat.id })];
             case 4:
-                lesson = _a.sent();
-                if (lesson.lessonNumber > 1) {
-                    dif_1 = (lesson.lessonNumber - 1) % 8;
-                }
-                else {
-                    dif_1 = lesson.lessonNumber % 8;
-                }
-                arrWithRestDays = [{ key: 1, value: 26 }, { key: 2, value: 23 }, { key: 3, value: 19 }, { key: 4, value: 16 }, { key: 5, value: 12 }, { key: 6, value: 9 }, { key: 7, value: 5 }, { key: 0, value: 2 }];
-                result_1 = 0;
-                arrWithRestDays.forEach(function (el) {
-                    if (el.key === dif_1) {
-                        result_1 = el.value;
+                group_1 = _a.sent();
+                thisWeekSaturday = moment_1.default().endOf('week');
+                diff = 4 - ((group_1.currentWeek + 1) % 4);
+                for (i = 0; i < group_1.holidayWeeksNumbers.length; i++) {
+                    if (group_1.holidayWeeksNumbers[i] - (group_1.currentWeek + 1) <= 4 || !group_1.isActive) {
+                        diff += 1;
                     }
-                });
-                if (lesson.lessonDayOne === "2")
-                    result_1 -= 1;
-                nextSaturdaySimpleDate = buildMomentDate(lesson.dateOfLastLesson).add(result_1, "days");
-                monthBeforeExam = buildMomentDate(lesson.dateOfLastLesson).add(result_1, "days").subtract(28, 'days');
-                holidayOne = buildMomentDate(lesson.holidayOne);
-                holidayTwo = buildMomentDate(lesson.holidayTwo);
-                if ((holidayOne < nextSaturdaySimpleDate && holidayOne >= monthBeforeExam) || (holidayTwo < nextSaturdaySimpleDate && holidayTwo >= monthBeforeExam)) {
-                    result_1 += 7;
                 }
-                dateOfNextSaturday = buildMomentDate(lesson.dateOfLastLesson).add(result_1, "days").format("DD-MM-YYYY");
-                text = "\n\n<strong>--------------------------------------</strong>\n\n\n<strong>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</strong>\n        \n        \n<b>\u0412\u0430\u0448\u0430 \u0433\u0440\u0443\u043F\u043F\u0430 </b><pre>" + lesson.groupName + "</pre>\n\n<b>\u0412\u044B \u0443\u0447\u0438\u0442\u0435\u0441\u044C \u043F\u043E </b><pre>" + weekDays[lesson.lessonDayOne] + " \u0438 " + weekDays[lesson.lessonDayTwo] + "</pre>\n\n<b>\u041F\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 c </b><pre>" + lessonTime[lesson.time] + "</pre>\n\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b><pre>" + weekDays[lesson.webinarOne] + "  " + (weekDays[lesson.webinarTwo] ? " и по " + weekDays[lesson.webinarTwo] : "") + "</pre>\n\n<b>\u041D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F </b><pre>#" + lesson.lessonNumber + "</pre>\n\n<b>\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F </b><pre>#" + lesson.examNumber + " \u0431\u0443\u0434\u0435\u0442 \u0432 \u0441\u0443\u0431\u0431\u043E\u0442\u0443 " + dateOfNextSaturday + "</pre>     \n\n<b>\u041F\u0435\u0440\u0432\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson.holidayOne + "</pre> \n     \n<b>\u0412\u0442\u043E\u0440\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson.holidayTwo + "</pre> \n\n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>#" + lesson.groupAdmin + "</pre> \n     \n<strong>--------------------------------------</strong>\n \n";
+                examSaturday = thisWeekSaturday.add(diff, "weeks").format("DD-MM-YYYY");
+                weekDays_1 = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',];
+                text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group_1.groupName + "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#" + (Math.floor(group_1.currentWeek / 4) + 1) + " \u0431\u0443\u0434\u0435\u0442 " + examSaturday + "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group_1.groupAdmin + "</pre> \n";
+                text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
+                _loop_1 = function (i) {
+                    text += Object.keys(group_1.lessons[i]).map(function (key) {
+                        return "<pre>" + weekDays_1[parseInt(key) - 1] + " \u0432 " + group_1.lessons[i][key] + "</pre> \n";
+                    });
+                };
+                for (i = 0; i < group_1.lessons.length; i++) {
+                    _loop_1(i);
+                }
+                text += "<b>----------------------------</b>\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b>\n";
+                _loop_2 = function (i) {
+                    text += Object.keys(group_1.webinars[i]).map(function (key) {
+                        return "<pre>" + weekDays_1[parseInt(key) - 1] + " \u0432 " + group_1.webinars[i][key] + "</pre> \n";
+                    });
+                };
+                for (i = 0; i < group_1.webinars.length; i++) {
+                    _loop_2(i);
+                }
+                text += "<b>----------------------------</b>\n<b>\u0414\u0430\u0442\u044B \u043A\u0430\u043D\u0438\u043A\u0443\u043B</b>\n";
+                for (i = 0; i < group_1.holidays.length; i++) {
+                    text += "<pre>" + group_1.holidays[i] + "</pre> \n";
+                }
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, text, {
                         parse_mode: "HTML"
                     })];
             case 5:
-                send_7 = _a.sent();
+                send_8 = _a.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-                    bot.deleteMessage(msg.chat.id, send_7.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, send_8.message_id.toString());
                 }, 30000); // 30 секунд до удаления сообщения
                 return [3 /*break*/, 8];
             case 6:
-                err_6 = _a.sent();
+                err_5 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Группа еще не создана")];
             case 7:
                 _a.sent();
@@ -783,96 +765,96 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
  * Подсказки данной команды нет, нужно вводить самому без ошибок, иначе не сработает
  */
 bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isPrivate, arrWithRestDays, lesson, _loop_1, i, err_7;
+    var isPrivate, groups, _loop_3, i, err_6;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 isPrivate = msg.chat.type === "private";
-                arrWithRestDays = [{ key: 1, value: 26 }, { key: 2, value: 23 }, { key: 3, value: 19 }, { key: 4, value: 16 }, { key: 5, value: 12 }, { key: 6, value: 9 }, { key: 7, value: 5 }, { key: 0, value: 2 }];
-                if (!isPrivate) return [3 /*break*/, 12];
+                if (!isPrivate) return [3 /*break*/, 10];
                 _a.label = 1;
             case 1:
-                _a.trys.push([1, 9, , 11]);
-                return [4 /*yield*/, lesson_model_1.Lesson.find()];
+                _a.trys.push([1, 7, , 9]);
+                return [4 /*yield*/, group_model_1.Group.find()];
             case 2:
-                lesson = _a.sent();
-                if (!(lesson.length === 0)) return [3 /*break*/, 4];
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Групп в наличии нет, какой кошмар")];
-            case 3:
-                _a.sent();
-                _a.label = 4;
-            case 4:
-                _loop_1 = function (i) {
-                    var totalAmountOfUsers, admins, amountWithoutAdmins, dif, result, nextSaturdaySimpleDate, monthBeforeExam, holidayOne, holidayTwo, text;
+                groups = _a.sent();
+                _loop_3 = function (i) {
+                    var group, thisWeekSaturday, diff, j, examSaturday, weekDays, text, _loop_4, j, _loop_5, j, j, numbersDividers;
                     return __generator(this, function (_b) {
                         switch (_b.label) {
-                            case 0: return [4 /*yield*/, bot.getChatMembersCount(lesson[i].chatId)];
-                            case 1:
-                                totalAmountOfUsers = _b.sent();
-                                return [4 /*yield*/, bot.getChatAdministrators(lesson[i].chatId)];
-                            case 2:
-                                admins = _b.sent();
-                                amountWithoutAdmins = totalAmountOfUsers - admins.length;
-                                if (lesson[i].lessonNumber > 1) {
-                                    dif = (lesson[i].lessonNumber - 1) % 8;
-                                }
-                                else {
-                                    dif = lesson[i].lessonNumber % 8;
-                                }
-                                result = 0;
-                                arrWithRestDays.map(function (el) {
-                                    if (el.key === dif) {
-                                        result = el.value;
-                                        return null;
+                            case 0:
+                                group = groups[i];
+                                thisWeekSaturday = moment_1.default().endOf('week');
+                                diff = 4 - ((group.currentWeek + 1) % 4);
+                                for (j = 0; j < group.holidayWeeksNumbers.length; j++) {
+                                    if (group.holidayWeeksNumbers[j] - (group.currentWeek + 1) <= 4 || !group.isActive) {
+                                        diff += 1;
                                     }
-                                });
-                                if (lesson[i].lessonDayOne === "2")
-                                    result -= 1;
-                                nextSaturdaySimpleDate = buildMomentDate(lesson[i].dateOfLastLesson).add(result, "days");
-                                monthBeforeExam = buildMomentDate(lesson[i].dateOfLastLesson).add(result, "days").subtract(28, 'days');
-                                holidayOne = buildMomentDate(lesson[i].holidayOne);
-                                holidayTwo = buildMomentDate(lesson[i].holidayTwo);
-                                if ((holidayOne < nextSaturdaySimpleDate && holidayOne >= monthBeforeExam) || (holidayTwo < nextSaturdaySimpleDate && holidayTwo >= monthBeforeExam)) {
-                                    result += 7;
                                 }
-                                dateOfNextSaturday = buildMomentDate(lesson[i].dateOfLastLesson).add(result, "days").format("DD-MM-YYYY");
-                                text = "\n\n<strong>--------------------------------------</strong>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0433\u0440\u0443\u043F\u043F\u0435 </b><pre>" + lesson[i].groupName + "</pre>\n\n<b>\u041B\u044E\u0434\u0435\u0439 \u0432 \u0447\u0430\u0442\u0435 \u0433\u0440\u0443\u043F\u043F\u044B </b><pre>" + totalAmountOfUsers + "</pre>\n\n<b>\u041B\u044E\u0434\u0435\u0439 \u0432 \u0447\u0430\u0442\u0435 \u0431\u0435\u0437 \u0430\u0434\u043C\u0438\u043D\u043E\u0432 </b><pre>" + amountWithoutAdmins + "</pre>\n\n<b>\u0423\u0447\u0435\u0431\u043D\u044B\u0435 \u0434\u043D\u0438 \u043F\u043E </b><pre>" + weekDays[lesson[i].lessonDayOne] + " \u0438 " + weekDays[lesson[i].lessonDayTwo] + "</pre>\n\n<b>\u041F\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 c </b><pre>" + lessonTime[lesson[i].time] + "</pre>\n\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b><pre>" + weekDays[lesson[i].webinarOne] + "  " + (weekDays[lesson[i].webinarTwo] ? " и по " + weekDays[lesson[i].webinarTwo] : "") + "</pre>\n\n<b>\u041D\u043E\u043C\u0435\u0440 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F </b><pre>#" + lesson[i].lessonNumber + "</pre>\n\n<b>\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F </b><pre>#" + lesson[i].examNumber + " \u0431\u0443\u0434\u0435\u0442 \u0432 \u0441\u0443\u0431\u0431\u043E\u0442\u0443 " + dateOfNextSaturday + "</pre>\n\n<b>\u041F\u0435\u0440\u0432\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson[i].holidayOne + "</pre>\n\n<b>\u0412\u0442\u043E\u0440\u044B\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B</b><pre>#" + lesson[i].holidayTwo + "</pre>\n\n<b>\u0410\u0434\u043C\u0438\u043D \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>#" + lesson[i].groupAdmin + "</pre> \n\n<b>ID \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + lesson[i]._id + "</pre>\n\n<strong>--------------------------------------</strong>\n\n";
-                                return [4 /*yield*/, bot.sendMessage(msg.chat.id, (i + 1).toString())];
-                            case 3:
+                                examSaturday = thisWeekSaturday.add(diff, "weeks").format("DD-MM-YYYY");
+                                weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',];
+                                text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group.groupName + "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#" + (Math.floor(group.currentWeek / 4) + 1) + " \u0431\u0443\u0434\u0435\u0442 " + examSaturday + "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group.groupAdmin + "</pre> \n";
+                                text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
+                                _loop_4 = function (j) {
+                                    text += Object.keys(group.lessons[j]).map(function (key) {
+                                        return "<pre>" + weekDays[parseInt(key) - 1] + " \u0432 " + group.lessons[j][key] + "</pre> \n";
+                                    });
+                                };
+                                for (j = 0; j < group.lessons.length; j++) {
+                                    _loop_4(j);
+                                }
+                                text += "<b>----------------------------</b>\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b>\n";
+                                _loop_5 = function (j) {
+                                    text += Object.keys(group.webinars[j]).map(function (key) {
+                                        return "<pre>" + weekDays[parseInt(key) - 1] + " \u0432 " + group.webinars[j][key] + "</pre> \n";
+                                    });
+                                };
+                                for (j = 0; j < group.webinars.length; j++) {
+                                    _loop_5(j);
+                                }
+                                text += "<b>----------------------------</b>\n<b>\u0414\u0430\u0442\u044B \u043A\u0430\u043D\u0438\u043A\u0443\u043B</b>\n";
+                                for (j = 0; j < group.holidays.length; j++) {
+                                    text += "<pre>" + group.holidays[j] + "</pre> \n";
+                                }
+                                text += "\n<b>ID \u0433\u0440\u0443\u043F\u043F\u044B</b> <pre>" + group._id + "</pre>\n                ";
+                                numbersDividers = "\n<b>----------------------------</b>\n<b>" + (i + 1) + "</b>\n<b>----------------------------</b>\n                ";
+                                return [4 /*yield*/, bot.sendMessage(msg.chat.id, numbersDividers, {
+                                        parse_mode: "HTML"
+                                    })];
+                            case 1:
                                 _b.sent();
                                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, text, {
                                         parse_mode: "HTML"
                                     })];
-                            case 4:
+                            case 2:
                                 _b.sent();
                                 return [2 /*return*/];
                         }
                     });
                 };
                 i = 0;
+                _a.label = 3;
+            case 3:
+                if (!(i < groups.length)) return [3 /*break*/, 6];
+                return [5 /*yield**/, _loop_3(i)];
+            case 4:
+                _a.sent();
                 _a.label = 5;
             case 5:
-                if (!(i < lesson.length)) return [3 /*break*/, 8];
-                return [5 /*yield**/, _loop_1(i)];
-            case 6:
-                _a.sent();
-                _a.label = 7;
-            case 7:
                 i++;
-                return [3 /*break*/, 5];
-            case 8: return [3 /*break*/, 11];
-            case 9:
-                err_7 = _a.sent();
+                return [3 /*break*/, 3];
+            case 6: return [3 /*break*/, 9];
+            case 7:
+                err_6 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")];
-            case 10:
+            case 8:
                 _a.sent();
-                return [3 /*break*/, 11];
-            case 11: return [3 /*break*/, 14];
-            case 12: return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично пожалуйста, я не могу когда все смотрят")];
-            case 13:
+                return [3 /*break*/, 9];
+            case 9: return [3 /*break*/, 12];
+            case 10: return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично пожалуйста, я не могу когда все смотрят")];
+            case 11:
                 _a.sent();
-                _a.label = 14;
-            case 14: return [2 /*return*/];
+                _a.label = 12;
+            case 12: return [2 /*return*/];
         }
     });
 }); });
@@ -884,7 +866,7 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
  * Пароль пока не придумал где хранить, пусть это будет coolPasha
  */
 bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
-    var funnyResponse, ii, lesson, err_8;
+    var funnyResponse, ii, group, err_7;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -893,14 +875,14 @@ bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 
             case 1:
                 _a.trys.push([1, 8, , 10]);
                 ii = arr[1].replace(/\s+/g, ' ').trim().split(" ");
-                return [4 /*yield*/, lesson_model_1.Lesson.findOne({ _id: ii[0] })];
+                return [4 /*yield*/, group_model_1.Group.findOne({ _id: ii[0] })];
             case 2:
-                lesson = _a.sent();
+                group = _a.sent();
                 if (!(ii[1] === "coolPasha")) return [3 /*break*/, 5];
-                return [4 /*yield*/, lesson.delete()];
+                return [4 /*yield*/, group.delete()];
             case 3:
                 _a.sent();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0413\u0440\u0443\u043F\u043F\u0430 " + lesson.groupName + " \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0443\u0434\u0430\u043B\u0435\u043D\u0430 \u0438\u0437 \u0431\u0430\u0437\u044B")];
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0413\u0440\u0443\u043F\u043F\u0430 " + group.groupName + " \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0443\u0434\u0430\u043B\u0435\u043D\u0430 \u0438\u0437 \u0431\u0430\u0437\u044B")];
             case 4:
                 _a.sent();
                 return [3 /*break*/, 7];
@@ -912,7 +894,7 @@ bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 
                 _a.label = 7;
             case 7: return [3 /*break*/, 10];
             case 8:
-                err_8 = _a.sent();
+                err_7 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
@@ -931,7 +913,7 @@ bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 
  * Первый шифр, азбука Морзе, отправляется аудиофайлом. Зашифрованная команда gotonext
  */
 bot.onText(/\/letsplay/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, text, send_8, err_9;
+    var isBotAdmin, botId, text, send_9, err_8;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -950,22 +932,22 @@ bot.onText(/\/letsplay/, function (msg) { return __awaiter(void 0, void 0, void 
                 _a.label = 3;
             case 3:
                 _a.trys.push([3, 6, , 8]);
-                text = "\n            <b>\u041A\u0430\u043A \u043A\u043E\u043C\u0430\u043D\u0434\u0443 \u043D\u0430\u043F\u0438\u0448\u0438 \u043C\u043D\u0435 \u0447\u0442\u043E \u0442\u044B \u0441\u043B\u044B\u0448\u0438\u0448\u044C \u0432 \u044D\u0442\u043E\u043C \u0444\u0430\u0439\u043B\u0435</b>\n        ";
+                text = "\n            <b>\u041A\u0430\u043A \u043A\u043E\u043C\u0430\u043D\u0434\u0443 \u043D\u0430\u043F\u0438\u0448\u0438 \u043C\u043D\u0435 \u0447\u0442\u043E \u0442\u044B \u0441\u043B\u044B\u0448\u0438\u0448\u044C \u0432 \u044D\u0442\u043E\u043C \u0444\u0430\u0439\u043B\u0435 (\u0435\u0441\u043B\u0438 \u0437\u0432\u0443\u043A\u0430 \u043D\u0435\u0442, \u0442\u043E \u0441\u043A\u0430\u0447\u0430\u0439\u0442\u0435 \u0444\u0430\u0439\u043B \u0438 \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0438\u0433\u0440\u044B\u0432\u0430\u0442\u0435\u043B\u044C)</b>\n        ";
                 return [4 /*yield*/, bot.sendAudio(msg.chat.id, "./ciphers/guesswhat.wav", {
                         caption: text,
                         parse_mode: "HTML"
                     })];
             case 4:
-                send_8 = _a.sent();
+                send_9 = _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
                         bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-                        bot.deleteMessage(msg.chat.id, send_8.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_9.message_id.toString());
                     }, 120000)];
             case 5:
                 _a.sent();
                 return [3 /*break*/, 8];
             case 6:
-                err_9 = _a.sent();
+                err_8 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 7:
                 _a.sent();
@@ -984,7 +966,7 @@ bot.onText(/\/letsplay/, function (msg) { return __awaiter(void 0, void 0, void 
  *  чтобы никто не скопировал то, что смог найти другой. Шифр имеет отступ +7 символов, ведет к команде stepthree
  */
 bot.onText(/\/gotonext/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, isPrivate, send_9, err_10;
+    var isBotAdmin, botId, isPrivate, send_10, err_9;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -1012,12 +994,12 @@ bot.onText(/\/gotonext/, function (msg) { return __awaiter(void 0, void 0, void 
                 if (!isBotAdmin) return [3 /*break*/, 9];
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично, я не могу при всех")];
             case 6:
-                send_9 = _a.sent();
+                send_10 = _a.sent();
                 return [4 /*yield*/, bot.deleteMessage(msg.chat.id, msg.message_id.toString())];
             case 7:
                 _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
-                        bot.deleteMessage(msg.chat.id, send_9.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_10.message_id.toString());
                     }, 7000)];
             case 8:
                 _a.sent();
@@ -1028,7 +1010,7 @@ bot.onText(/\/gotonext/, function (msg) { return __awaiter(void 0, void 0, void 
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
             case 12:
-                err_10 = _a.sent();
+                err_9 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 13:
                 _a.sent();
@@ -1042,7 +1024,7 @@ bot.onText(/\/gotonext/, function (msg) { return __awaiter(void 0, void 0, void 
  *  Код ведет к команде website (исходное предложение you are on the right way my friend now write me the command website)
  */
 bot.onText(/\/stepthree/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, isPrivate, send_10, err_11;
+    var isBotAdmin, botId, isPrivate, send_11, err_10;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -1070,12 +1052,12 @@ bot.onText(/\/stepthree/, function (msg) { return __awaiter(void 0, void 0, void
                 if (!isBotAdmin) return [3 /*break*/, 9];
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Если второй шаг был в личной переписке, почему третий должен быть в общем чате?")];
             case 6:
-                send_10 = _a.sent();
+                send_11 = _a.sent();
                 return [4 /*yield*/, bot.deleteMessage(msg.chat.id, msg.message_id.toString())];
             case 7:
                 _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
-                        bot.deleteMessage(msg.chat.id, send_10.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_11.message_id.toString());
                     }, 7000)];
             case 8:
                 _a.sent();
@@ -1086,7 +1068,7 @@ bot.onText(/\/stepthree/, function (msg) { return __awaiter(void 0, void 0, void
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
             case 12:
-                err_11 = _a.sent();
+                err_10 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 13:
                 _a.sent();
@@ -1106,7 +1088,7 @@ bot.onText(/\/stepthree/, function (msg) { return __awaiter(void 0, void 0, void
  * Итоговая команда /243256
  */
 bot.onText(/\/website/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, isPrivate, send_11, err_12;
+    var isBotAdmin, botId, isPrivate, send_12, err_11;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -1134,12 +1116,12 @@ bot.onText(/\/website/, function (msg) { return __awaiter(void 0, void 0, void 0
                 if (!isBotAdmin) return [3 /*break*/, 9];
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Вы издеваетесь))?")];
             case 6:
-                send_11 = _a.sent();
+                send_12 = _a.sent();
                 return [4 /*yield*/, bot.deleteMessage(msg.chat.id, msg.message_id.toString())];
             case 7:
                 _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
-                        bot.deleteMessage(msg.chat.id, send_11.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_12.message_id.toString());
                     }, 7000)];
             case 8:
                 _a.sent();
@@ -1150,7 +1132,7 @@ bot.onText(/\/website/, function (msg) { return __awaiter(void 0, void 0, void 0
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
             case 12:
-                err_12 = _a.sent();
+                err_11 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 13:
                 _a.sent();
@@ -1169,7 +1151,7 @@ bot.onText(/\/website/, function (msg) { return __awaiter(void 0, void 0, void 0
  *  команда итоговая iamthechampion
  */
 bot.onText(/\/243256/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, isPrivate, text, send_12, err_13;
+    var isBotAdmin, botId, isPrivate, text, send_13, err_12;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -1201,12 +1183,12 @@ bot.onText(/\/243256/, function (msg) { return __awaiter(void 0, void 0, void 0,
                 if (!isBotAdmin) return [3 /*break*/, 9];
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Вы далеко зашли, и вами движет любопытство, что же ответит бот в общем чате на этот раз. А отвечу я 'notredame'")];
             case 6:
-                send_12 = _a.sent();
+                send_13 = _a.sent();
                 return [4 /*yield*/, bot.deleteMessage(msg.chat.id, msg.message_id.toString())];
             case 7:
                 _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
-                        bot.deleteMessage(msg.chat.id, send_12.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_13.message_id.toString());
                     }, 7000)];
             case 8:
                 _a.sent();
@@ -1217,7 +1199,7 @@ bot.onText(/\/243256/, function (msg) { return __awaiter(void 0, void 0, void 0,
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
             case 12:
-                err_13 = _a.sent();
+                err_12 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 13:
                 _a.sent();
@@ -1231,7 +1213,7 @@ bot.onText(/\/243256/, function (msg) { return __awaiter(void 0, void 0, void 0,
  *  о своей победе))) Подумать о призах, может скидку тому, кто первый решит?
  */
 bot.onText(/\/iamthechampion/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, isPrivate, text, textWinnerToGroup, err_14;
+    var isBotAdmin, botId, isPrivate, text, textWinnerToGroup, err_13;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -1277,7 +1259,7 @@ bot.onText(/\/iamthechampion/, function (msg) { return __awaiter(void 0, void 0,
                 _a.label = 10;
             case 10: return [3 /*break*/, 13];
             case 11:
-                err_14 = _a.sent();
+                err_13 = _a.sent();
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 12:
                 _a.sent();
@@ -1290,263 +1272,233 @@ bot.onText(/\/iamthechampion/, function (msg) { return __awaiter(void 0, void 0,
 /**
  * Функции для составления необходимых сообщений
  */
+var buildLessonMessage = function (groups, day) { return __awaiter(void 0, void 0, void 0, function () {
+    var i, j, isExamToday, checkKeyAndGetTime, lessonNum;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                i = 0;
+                _a.label = 1;
+            case 1:
+                if (!(i < groups.length)) return [3 /*break*/, 6];
+                j = 0;
+                _a.label = 2;
+            case 2:
+                if (!(j < groups[i].lessons.length)) return [3 /*break*/, 5];
+                isExamToday = day === 6 && (groups[i].currentWeek + 1) % 4 === 0;
+                if (isExamToday)
+                    return [3 /*break*/, 4];
+                checkKeyAndGetTime = groups[i].lessons[j][day];
+                if (!(checkKeyAndGetTime && groups[i].isActive)) return [3 /*break*/, 4];
+                lessonNum = (groups[i].currentWeek) * groups[i].lessons.length + j + 1;
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (" + moment_1.default().format("DD-MM-YYYY") + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u043D\u043E\u043C\u0435\u0440 #" + lessonNum + " \u0432 " + checkKeyAndGetTime + ", \u0447\u0438\u0442\u0430\u0439\u0442\u0435 \u0440\u0430\u0437\u0434\u0430\u0442\u043A\u0443 \u043F\u0435\u0440\u0435\u0434 \u0437\u0430\u043D\u044F\u0442\u0438\u0435\u043C", {
+                        parse_mode: "HTML"
+                    })];
+            case 3:
+                _a.sent();
+                _a.label = 4;
+            case 4:
+                j++;
+                return [3 /*break*/, 2];
+            case 5:
+                i++;
+                return [3 /*break*/, 1];
+            case 6: return [2 /*return*/];
+        }
+    });
+}); };
+var buildWebinarMessage = function (groups, day) { return __awaiter(void 0, void 0, void 0, function () {
+    var i, j, isExamToday, checkKeyAndGetTime;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                i = 0;
+                _a.label = 1;
+            case 1:
+                if (!(i < groups.length)) return [3 /*break*/, 6];
+                j = 0;
+                _a.label = 2;
+            case 2:
+                if (!(j < groups[i].webinars.length)) return [3 /*break*/, 5];
+                isExamToday = day === 6 && (groups[i].currentWeek + 1) % 4 === 0;
+                if (isExamToday)
+                    return [3 /*break*/, 4];
+                checkKeyAndGetTime = groups[i].webinars[j][day];
+                if (!(checkKeyAndGetTime && groups[i].isActive)) return [3 /*break*/, 4];
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (" + moment_1.default().format("DD-MM-YYYY") + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u0432\u0435\u0431\u0438\u043D\u0430\u0440 \u0432 " + checkKeyAndGetTime + ", \u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0441 \u0445\u044D\u0448\u0442\u044D\u0433\u043E\u043C #\u041D\u0430\u0432\u0435\u0431\u0438\u043D\u0430\u0440", {
+                        parse_mode: "HTML"
+                    })];
+            case 3:
+                _a.sent();
+                _a.label = 4;
+            case 4:
+                j++;
+                return [3 /*break*/, 2];
+            case 5:
+                i++;
+                return [3 /*break*/, 1];
+            case 6: return [2 /*return*/];
+        }
+    });
+}); };
 /**
- * Функция для составления базового сообщения, и вебинарного сообщения (возникла из-за частых переносов дат и времени вебинара), как о контрольной (но есть и другие сообщения о контрольной), так и о занятиях
+ * Составление сообщения о наступающей контрольной
  */
-function buildTheMessage(chatId, typeOfLesson, lessonOrExamNumber, time, date, additionalText) {
-    return __awaiter(this, void 0, void 0, function () {
-        var text;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    text = "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (" + date + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F " + typeOfLesson + " \u043D\u043E\u043C\u0435\u0440 #" + lessonOrExamNumber + " \u0432 " + time + ", " + additionalText;
-                    return [4 /*yield*/, bot.sendMessage(chatId, text)];
-                case 1:
-                    _a.sent();
-                    return [2 /*return*/];
-            }
-        });
+var buildComingExamMessage = function (groups, date) { return __awaiter(void 0, void 0, void 0, function () {
+    var i;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                i = 0;
+                _a.label = 1;
+            case 1:
+                if (!(i < groups.length)) return [3 /*break*/, 4];
+                if (!((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive)) return [3 /*break*/, 3];
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0432 \u044D\u0442\u0443 \u0441\u0443\u0431\u0431\u043E\u0442\u0443 (" + date + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043D\u043E\u043C\u0435\u0440 #" + (groups[i].currentWeek + 1) / 4 + " c 11:00 \u0434\u043E 19:00, \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0432\u0441\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043D\u044B\u0435 \u0442\u0435\u043C\u044B \u044D\u0442\u043E\u0433\u043E \u043C\u0435\u0441\u044F\u0446\u0430", {
+                        parse_mode: "HTML"
+                    })];
+            case 2:
+                _a.sent();
+                _a.label = 3;
+            case 3:
+                i++;
+                return [3 /*break*/, 1];
+            case 4: return [2 /*return*/];
+        }
     });
-}
-function buildTheWebinarMessage(chatId, typeOfLesson, date, additionalText) {
-    return __awaiter(this, void 0, void 0, function () {
-        var text;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    text = "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (" + date + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F " + typeOfLesson + ", " + additionalText;
-                    return [4 /*yield*/, bot.sendMessage(chatId, text)];
-                case 1:
-                    _a.sent();
-                    return [2 /*return*/];
-            }
-        });
-    });
-}
+}); };
 /**
- * Функция для определения какое именно будет сообщение, идет проверка на день недели и вечернюю или дневную группу
+ * Составление сообщения о контрольной сегодня
  */
-function buildTheMessageWithConditions(lesson, day) {
-    return __awaiter(this, void 0, void 0, function () {
-        var date, i, holiday;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    date = moment_1.default().format("DD-MM-YYYY");
-                    i = 0;
-                    _a.label = 1;
-                case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 7];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 6];
-                    if (!(lesson[i].lessonDayOne === day || lesson[i].lessonDayTwo === day)) return [3 /*break*/, 6];
-                    if (!(lesson[i].time === 'evening')) return [3 /*break*/, 3];
-                    return [4 /*yield*/, buildTheMessage(lesson[i].chatId, "Занятие", lesson[i].lessonNumber + "", "19:30", date, "читайте раздатку перед занятием")];
-                case 2:
-                    _a.sent();
-                    return [3 /*break*/, 5];
-                case 3:
-                    if (!(lesson[i].time === 'lunch')) return [3 /*break*/, 5];
-                    return [4 /*yield*/, buildTheMessage(lesson[i].chatId, "Занятие", lesson[i].lessonNumber + "", "16:00", date, "читайте раздатку перед занятием")];
-                case 4:
-                    _a.sent();
-                    _a.label = 5;
-                case 5:
-                    lesson[i].lessonNumber += 1;
-                    lesson[i].dateOfLastLesson = date;
-                    // @ts-ignore
-                    lesson[i].save();
-                    _a.label = 6;
-                case 6:
-                    i++;
-                    return [3 /*break*/, 1];
-                case 7: return [2 /*return*/];
-            }
-        });
+var buildTodayExamMessage = function (groups) { return __awaiter(void 0, void 0, void 0, function () {
+    var i;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                i = 0;
+                _a.label = 1;
+            case 1:
+                if (!(i < groups.length)) return [3 /*break*/, 4];
+                if (!((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive)) return [3 /*break*/, 3];
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (" + moment_1.default().format("DD-MM-YYYY") + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043D\u043E\u043C\u0435\u0440 #" + (groups[i].currentWeek + 1) / 4 + " c 11:00 \u0434\u043E 19:00, \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0442\u0440\u0435\u043A\u043A\u0435\u0440\u044B \u0435\u0441\u043B\u0438 \u043F\u0438\u0448\u0438\u0442\u0435 \u043E\u043D\u043B\u0430\u0439\u043D, \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0432\u0441\u0435 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u043C\u0443 \u043C\u043D\u0435\u043D\u0438\u044E \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u044B", {
+                        parse_mode: "HTML"
+                    })];
+            case 2:
+                _a.sent();
+                _a.label = 3;
+            case 3:
+                i++;
+                return [3 /*break*/, 1];
+            case 4: return [2 /*return*/];
+        }
     });
-}
+}); };
 /**
- * Функция для составления сообщения о вебинаре, проверяет на среду и пятницу, время зашито как 19:30
+ * Составление сообщения о предстоящей оплате
  */
-function buildWebinarMessage(lesson, day) {
-    return __awaiter(this, void 0, void 0, function () {
-        var date, i, holiday;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    date = moment_1.default().format("DD-MM-YYYY");
-                    i = 0;
-                    _a.label = 1;
-                case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].webinarOne === day || lesson[i].webinarTwo === day)) return [3 /*break*/, 3];
-                    if ((lesson[i].webinarOne === "3" || lesson[i].webinarOne === "2") && lesson[i].lessonNumber % 8 === 1) {
-                        return [3 /*break*/, 3];
-                    }
-                    return [4 /*yield*/, buildTheWebinarMessage(lesson[i].chatId, "Вебинар", date, "\u041F\u0438\u0448\u0438\u0442\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0441 \u0445\u044D\u0448\u0442\u044D\u0433\u043E\u043C #\u041D\u0430\u0432\u0435\u0431\u0438\u043D\u0430\u0440")];
-                case 2:
-                    _a.sent();
-                    _a.label = 3;
-                case 3:
-                    i++;
-                    return [3 /*break*/, 1];
-                case 4: return [2 /*return*/];
-            }
-        });
+var buildPaySoonMessage = function (groups, date) { return __awaiter(void 0, void 0, void 0, function () {
+    var i;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                i = 0;
+                _a.label = 1;
+            case 1:
+                if (!(i < groups.length)) return [3 /*break*/, 4];
+                if (!((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3)) return [3 /*break*/, 3];
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, \u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 \u0442\u0435\u043A\u0443\u0449\u0438\u0439 \u043C\u0435\u0441\u044F\u0446, \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u043E \u043F\u044F\u0442\u043D\u0438\u0446\u044B (" + date + ")", {
+                        parse_mode: "HTML"
+                    })];
+            case 2:
+                _a.sent();
+                _a.label = 3;
+            case 3:
+                i++;
+                return [3 /*break*/, 1];
+            case 4: return [2 /*return*/];
+        }
     });
-}
+}); };
 /**
- * Функция для сообщения о субботнем вебинаре
+ * Составление сообщения об оплате сегодня
  */
-function buildWebinarSaturdayMessage(lesson) {
-    return __awaiter(this, void 0, void 0, function () {
-        var date;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    date = moment_1.default().format("DD-MM-YYYY");
-                    if (!(lesson.webinarOne === "6" || lesson.webinarTwo === "6")) return [3 /*break*/, 2];
-                    return [4 /*yield*/, buildTheWebinarMessage(lesson.chatId, "Вебинар", date, "\u041F\u0438\u0448\u0438\u0442\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0441 \u0445\u044D\u0448\u0442\u044D\u0433\u043E\u043C #\u041D\u0430\u0432\u0435\u0431\u0438\u043D\u0430\u0440")];
-                case 1:
-                    _a.sent();
-                    _a.label = 2;
-                case 2: return [2 /*return*/];
-            }
-        });
+var buildPayTodayMessage = function (groups) { return __awaiter(void 0, void 0, void 0, function () {
+    var months, i;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                months = ["noFirstMonth", "второй", "третий", "четвертый", "пятый", "шестой", "седьмой", "восьмой", "девятый", "десятый", "одиннадцатый", "двенадцатый", "тринадцатый", "четырнадцатый", "пятнадцатый"];
+                i = 0;
+                _a.label = 1;
+            case 1:
+                if (!(i < groups.length)) return [3 /*break*/, 4];
+                if (!((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3)) return [3 /*break*/, 3];
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 " + months[(groups[i].currentWeek) / 4] + " \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043C\u0435\u0441\u044F\u0446. \u0421\u0435\u0433\u043E\u0434\u043D\u044F - " + moment_1.default().format("DD-MM-YYYY") + ", \u043A\u0440\u0430\u0439\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u0432\u043D\u0435\u0441\u0435\u043D\u0438\u044F  \u043E\u043F\u043B\u0430\u0442\u044B.", {
+                        parse_mode: "HTML"
+                    })];
+            case 2:
+                _a.sent();
+                _a.label = 3;
+            case 3:
+                i++;
+                return [3 /*break*/, 1];
+            case 4: return [2 /*return*/];
+        }
     });
-}
+}); };
 /**
- * Функция для сообщения о контрольной в день контрольной
+ * Прибавление недели, обычшый счетчик, срабаьывает раз в неделю, скорее всего в понедельник  самом начале дня ночью.
  */
-function buildExamMessage(lesson) {
-    return __awaiter(this, void 0, void 0, function () {
-        var date, i, holiday;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    date = moment_1.default().format("DD-MM-YYYY");
-                    i = 0;
-                    _a.label = 1;
-                case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 7];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 6];
-                    if (!((lesson[i].lessonNumber - 1) % 8 === 0 && lesson[i].lessonNumber >= 8)) return [3 /*break*/, 3];
-                    return [4 /*yield*/, buildTheMessage(lesson[i].chatId, "Контрольная", lesson[i].examNumber + "", "11:00", date, "\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0442\u0440\u0435\u043A\u043A\u0435\u0440 \u0435\u0441\u043B\u0438 \u0432\u044B \u0441\u0434\u0430\u0435\u0442\u0435 \u043E\u043D\u043B\u0430\u0439\u043D, \u0432\u043A\u043B\u044E\u0447\u0430\u0439\u0442\u0435 \u0437\u0443\u043C, \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0440\u0443\u0447\u043A\u0443 \u0438 \u0431\u0443\u043C\u0430\u0433\u0443, \u043B\u0438\u0448\u043D\u0438\u043C\u0438 \u043D\u0435 \u0431\u0443\u0434\u0443\u0442))")];
-                case 2:
-                    _a.sent();
-                    lesson[i].examNumber += 1;
-                    return [3 /*break*/, 5];
-                case 3: return [4 /*yield*/, buildWebinarSaturdayMessage(lesson[i])];
-                case 4:
-                    _a.sent();
-                    _a.label = 5;
-                case 5:
-                    // @ts-ignore
-                    lesson[i].save();
-                    _a.label = 6;
-                case 6:
-                    i++;
-                    return [3 /*break*/, 1];
-                case 7: return [2 /*return*/];
-            }
-        });
+var incrementWeek = function (groups) { return __awaiter(void 0, void 0, void 0, function () {
+    var i;
+    return __generator(this, function (_a) {
+        for (i = 0; i < groups.length; i++) {
+            groups[i].currentWeek++;
+            // @ts-ignore
+            groups[i].save();
+        }
+        return [2 /*return*/];
     });
-}
+}); };
 /**
- * Функция для сообщения о контролльной в течение недели до контрольной с указанием даты контрольной
+ * Проверка на каникулы, переключает isActive группы на false либо наоборот обратно на true
  */
-function buildExamMessageBeforeActualDate(lesson, date) {
-    return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    i = 0;
-                    _a.label = 1;
-                case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber % 8 === 0 || (lesson[i].lessonNumber + 1) % 8 === 0)) return [3 /*break*/, 3];
-                    text = "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0432 \u044D\u0442\u0443 \u0441\u0443\u0431\u0431\u043E\u0442\u0443 (" + date + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u043D\u043E\u043C\u0435\u0440 #" + lesson[i].examNumber + " c 11:00 \u0434\u043E 19:00, \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0432\u0441\u0435 \u0442\u0435\u043C\u044B \u044D\u0442\u043E\u0433\u043E \u043C\u0435\u0441\u044F\u0446\u0430";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text)];
-                case 2:
-                    _a.sent();
-                    _a.label = 3;
-                case 3:
-                    i++;
-                    return [3 /*break*/, 1];
-                case 4: return [2 /*return*/];
+var isHoliday = function (group) { return __awaiter(void 0, void 0, void 0, function () {
+    var i;
+    return __generator(this, function (_a) {
+        for (i = 0; i < group.holidayWeeksNumbers.length; i++) {
+            if (group.holidayWeeksNumbers[i] === (group.currentWeek + 1)) {
+                group.holidayWeeksNumbers.splice(i, 1);
+                group.isActive = false;
+                group.currentWeek -= 1;
+                // @ts-ignore
+                group.save();
+                return [2 /*return*/];
             }
-        });
+        }
+        group.isActive = true;
+        // @ts-ignore
+        group.save();
+        return [2 /*return*/];
     });
-}
-/**
- * Функция для напоминания об оплате, отрабатывает после первого первого занятия после контрольной
- * И для сообщения о дедлайне оплвты, отрабатывает в пятницу следующей недели после контрольной, не отрабатывает во время каникул
- */
-function buildPaymentNotificationMessage(lesson, date) {
-    return __awaiter(this, void 0, void 0, function () {
-        var months, todayDate, i, holiday, text, text;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    months = ["noFirstMonth", "второй", "третий", "четвертый", "пятый", "шестой", "седьмой", "восьмой", "девятый", "десятый", "одиннадцатый", "двенадцатый", "тринадцатый", "четырнадцатый", "пятнадцатый"];
-                    todayDate = moment_1.default().format("DD-MM-YYYY");
-                    i = 0;
-                    _a.label = 1;
-                case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 6];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 5];
-                    if (!(todayDate === date && (lesson[i].lessonNumber % 8 === 2 || lesson[i].lessonNumber % 8 === 3) && lesson[i].lessonNumber > 8)) return [3 /*break*/, 3];
-                    text = "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 " + months[lesson[i].examNumber - 1] + " \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043C\u0435\u0441\u044F\u0446. \u0421\u0435\u0433\u043E\u0434\u043D\u044F - " + date + ", \u043A\u0440\u0430\u0439\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u0432\u043D\u0435\u0441\u0435\u043D\u0438\u044F  \u043E\u043F\u043B\u0430\u0442\u044B.";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text)];
-                case 2:
-                    _a.sent();
-                    return [3 /*break*/, 5];
-                case 3:
-                    if (!((lesson[i].lessonNumber % 8 === 1 || lesson[i].lessonNumber % 8 === 2) && lesson[i].lessonNumber > 8)) return [3 /*break*/, 5];
-                    text = "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, \u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 \u0442\u0435\u043A\u0443\u0449\u0438\u0439 \u043C\u0435\u0441\u044F\u0446, \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u043E \u043F\u044F\u0442\u043D\u0438\u0446\u044B (" + date + ")";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text)];
-                case 4:
-                    _a.sent();
-                    _a.label = 5;
-                case 5:
-                    i++;
-                    return [3 /*break*/, 1];
-                case 6: return [2 /*return*/];
-            }
-        });
-    });
-}
+}); };
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * Функция для информирования о посещении школы
  */
-function buildVisitAttractorMessage(lesson) {
+function buildVisitAttractorMessage(groups) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
+        var i, text;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber === 1 || lesson[i].lessonNumber === 2)) return [3 /*break*/, 3];
+                    if (!(i < groups.length)) return [3 /*break*/, 4];
+                    if (!(groups[i].currentWeek === 0 && groups[i].isActive)) return [3 /*break*/, 3];
                     text = "\n\n<b>#\u0412\u0430\u0436\u043D\u0430\u044F\u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044F</b> \n\n\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!\n\n\u041E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u0446\u0435\u043D\u0442\u0440 \u0410\u0442\u0442\u0440\u0430\u043A\u0442\u043E\u0440 \u0421\u043A\u0443\u043B \u0432\u0441\u0435\u0433\u0434\u0430 \u0440\u0430\u0434 \u0432\u0438\u0434\u0435\u0442\u044C \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0438\u0437 \u0432\u0430\u0441 \u0432 \u043D\u0430\u0448\u0435\u043C \u043E\u0444\u0438\u0441\u0435. \u0412\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442\u044C \u043A \u043D\u0430\u043C \u0434\u043B\u044F \u0441\u0430\u043C\u043E\u0441\u0442\u043E\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B \u0434\u043B\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u0434\u043E\u043C\u0430\u0448\u043D\u0438\u0445 \u0437\u0430\u0434\u0430\u043D\u0438\u0439. \u041C\u044B \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u043C \u0441 \u041F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A\u0430 \u043F\u043E \u041F\u044F\u0442\u043D\u0438\u0446\u0443 \u0441 13-00 \u0434\u043E 22-00, \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E \u043E\u0442 \u0433\u043E\u0441\u0443\u0434\u0430\u0440\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0445, \u0440\u0435\u043B\u0438\u0433\u0438\u043E\u0437\u043D\u044B\u0445 \u0438 \u043F\u0440\u043E\u0447\u0438\u0445 \u043D\u0435\u0440\u0430\u0431\u043E\u0447\u0438\u0445 \u043F\u0440\u0430\u0437\u0434\u043D\u0438\u0447\u043D\u044B\u0445 \u0434\u043D\u0435\u0439.\n\n\u0428\u043A\u043E\u043B\u0430 \u043E\u0442\u0434\u044B\u0445\u0430\u0435\u0442 \u0434\u0432\u0430 \u0440\u0430\u0437\u0430 \u0432 \u0433\u043E\u0434 - \u043B\u0435\u0442\u043D\u0438\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B \u0438 \u043D\u043E\u0432\u043E\u0433\u043E\u0434\u043D\u0438\u0435 \u043A\u0430\u043D\u0438\u043A\u0443\u043B\u044B (\u0440\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u0435 \u0435\u0441\u0442\u044C \u0443 \u0432\u0430\u0441 \u0432 \u0444\u0430\u0439\u043B\u0435 \u041E\u0440\u0438\u0435\u043D\u0442\u0430\u0446\u0438\u044F).\n\n\u0416\u0435\u043B\u0430\u0435\u043C \u0432\u0441\u0435\u043C \u0432\u0430\u043C \u0443\u0441\u043F\u0435\u0445\u043E\u0432 \u0432 \u0443\u0447\u0435\u0431\u0435! \uD83E\uDD13\n\n            ";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text, {
+                    return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
                 case 2:
@@ -1563,22 +1515,19 @@ function buildVisitAttractorMessage(lesson) {
 /**
  * Функция для информирования об индивидуальных занятиях
  */
-function buildIndividualLessonsAnnounce(lesson) {
+function buildIndividualLessonsAnnounce(groups) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
+        var i, text;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber === 2)) return [3 /*break*/, 3];
+                    if (!(i < groups.length)) return [3 /*break*/, 4];
+                    if (!(groups[i].currentWeek === 0 && groups[i].isActive)) return [3 /*break*/, 3];
                     text = "\n\n<b>#\u0412\u0430\u0436\u043D\u043E\u0435\u043E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435</b>\n\n\u0414\u043E\u0431\u0440\u044B\u0439 \u0434\u0435\u043D\u044C, \u0443\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!\n\u041D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u0432\u0430\u043C \u043E \u0442\u043E\u043C, \u0447\u0442\u043E \u0443 \u0432\u0430\u0441 \u0435\u0441\u0442\u044C \u0438\u043D\u0434\u0438\u0432\u0438\u0434\u0443\u0430\u043B\u044C\u043D\u044B\u0435 \u0438 \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u044F, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0432 \u043B\u044E\u0431\u043E\u0435 \u0440\u0430\u0431\u043E\u0447\u0435\u0435 \u0432\u0440\u0435\u043C\u044F \u0441 \u041F\u043E\u043D\u0435\u0434\u0435\u043B\u044C\u043D\u0438\u043A\u0430 \u043F\u043E \u041F\u044F\u0442\u043D\u0438\u0446\u0443 \u0441 13-00 \u0434\u043E 22-00. \n\n\u0418\u043D\u0434\u0438\u0432\u0438\u0434\u0443\u0430\u043B\u044C\u043D\u044B\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u0444\u0444\u043B\u0430\u0439\u043D.\n\u0426\u0435\u043B\u044C \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E\u043C\u043E\u0447\u044C \u0432\u0430\u043C \u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C\u0441\u044F \u0441 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043D\u043E\u0439 \u0442\u0435\u043C\u043E\u0439 \u043D\u0430 \u043E\u0441\u043D\u043E\u0432\u0430\u043D\u0438\u0438 \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u044B\u0445 \u0432\u0430\u043C\u0438 \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u043E\u0437\u043D\u0438\u043A\u043B\u0438 \u043F\u0440\u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0438 \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0433\u043E \u0437\u0430\u0434\u0430\u043D\u0438\u044F. \u041F\u043E\u0434 \u0438\u043D\u0434\u0438\u0432\u0438\u0434\u0443\u0430\u043B\u044C\u043D\u044B\u043C \u0437\u0430\u043D\u044F\u0442\u0438\u0435\u043C \u043E\u0444\u0444\u043B\u0430\u0439\u043D \u043F\u043E\u0434\u0440\u0430\u0437\u0443\u043C\u0435\u0432\u0430\u0435\u0442\u0441\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u0441 \u0434\u0435\u0436\u0443\u0440\u043D\u044B\u043C \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0435\u043C \u0432 \u0430\u0443\u0434\u0438\u0442\u043E\u0440\u0438\u0438. \u0421 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0435\u043C \u043C\u043E\u0436\u0435\u0442 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u043E\u0442 1-\u0433\u043E \u0438 \u0431\u043E\u043B\u0435\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u043E\u0432 \u043E\u0434\u043D\u043E\u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E.\n\n\u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u043E\u043D\u043B\u0430\u0439\u043D \u0438\u043B\u0438 \u043E\u0444\u0444\u043B\u0430\u0439\u043D. \u0421\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C 1-\u0433\u043E \u0447\u0430\u0441\u0430 \u0437\u0430\u043D\u044F\u0442\u0438\u044F - 3 000 \u0442\u0433. \n\u041F\u043E\u0434 \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u043C \u0437\u0430\u043D\u044F\u0442\u0438\u0435\u043C \u043E\u043D\u043B\u0430\u0439\u043D \u043F\u043E\u0434\u0440\u0430\u0437\u0443\u043C\u0435\u0432\u0430\u0435\u0442\u0441\u044F \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u0441 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0435\u043C \u043F\u043E \u0432\u0438\u0434\u0435\u043E\u0441\u0432\u044F\u0437\u0438, \u0430 \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u043E\u0444\u0444\u043B\u0430\u0439\u043D \u043F\u0440\u043E\u0432\u043E\u0434\u0438\u0442\u0441\u044F \u0432 \u0430\u0443\u0434\u0438\u0442\u043E\u0440\u0438\u0438. \u0426\u0435\u043B\u044C \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E\u043C\u043E\u0447\u044C \u0432\u0430\u043C \u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C\u0441\u044F \u0441 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043D\u043E\u0439 \u0442\u0435\u043C\u043E\u0439. \u042D\u0442\u0438 \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0442\u0441\u044F \u043F\u043E \u0432\u0430\u0448\u0438\u043C \u0432\u043E\u043F\u0440\u043E\u0441\u0430\u043C, \u0432\u043E\u0437\u043D\u0438\u043A\u0448\u0438\u043C \u043F\u0440\u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0438 \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0433\u043E \u0437\u0430\u0434\u0430\u043D\u0438\u044F. \u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u043D\u0435 \u043F\u0440\u0435\u0434\u0443\u0441\u043C\u0430\u0442\u0440\u0438\u0432\u0430\u0435\u0442 \u043E\u0431\u044A\u044F\u0441\u043D\u0435\u043D\u0438\u0435 \u0442\u0435\u043C\u044B \u0443\u0440\u043E\u043A\u0430 \u0437\u0430\u043D\u043E\u0432\u043E, \u0430 \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u0442\u0432\u0435\u0442\u044B \u043D\u0430 \u0432\u0430\u0448\u0438 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0438 \u0440\u0430\u0437\u0431\u043E\u0440 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u043C\u043E\u043C\u0435\u043D\u0442\u043E\u0432 \u043F\u0440\u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u0438 \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0439 \u0440\u0430\u0431\u043E\u0442\u044B. \n\n\uD83D\uDCCC\u041A \u0437\u0430\u043D\u044F\u0442\u0438\u044E \u0432\u0430\u0436\u043D\u043E \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0438/\u0438\u043B\u0438 \u0432\u0430\u0448\u0438 \u0441\u043E\u0431\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u044D\u0442\u0438\u0445 \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u044B \u043F\u0440\u0438\u043C\u0435\u043D\u0438\u043B\u0438, \u0430 \u043E\u043D\u0438 \u043D\u0435 \u0441\u0440\u0430\u0431\u043E\u0442\u0430\u043B\u0438. \u041F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u044C \u043D\u0430\u043F\u0440\u0430\u0432\u0438\u0442 \u0432\u0430\u0441 \u043D\u0430 \u0432\u0435\u0440\u043D\u044B\u0439 \u043F\u0443\u0442\u044C \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u0438 \u0432\u044B \u043D\u0430 \u0431\u0443\u0434\u0443\u0449\u0435\u0435 \u043F\u043E\u0439\u043C\u0435\u0442\u0435, \u0432 \u043A\u0430\u043A\u043E\u043C \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0438 \u0432\u0430\u043C \u0434\u0432\u0438\u0433\u0430\u0442\u044C\u0441\u044F;\n\uD83D\uDCCC \u041E\u0434\u043D\u043E \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0435\u0442\u0441\u044F \u043D\u0435 \u0431\u043E\u043B\u0435\u0435 \u043E\u0434\u043D\u043E\u0433\u043E \u0447\u0430\u0441\u0430 \u0432 \u0434\u0435\u043D\u044C, \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u043D\u0438\u043C\u0430\u0442\u044C\u0441\u044F \u043D\u0435 \u0431\u043E\u043B\u0435\u0435 \u0434\u0432\u0443\u0445 \u0447\u0430\u0441\u043E\u0432 \u0441 \u043F\u0435\u0440\u0435\u0440\u044B\u0432\u043E\u043C \u043C\u0438\u043D\u0438\u043C\u0443\u043C \u043D\u0430 \u0447\u0430\u0441. \n\n\n\u203C\uFE0F\u0415\u0441\u043B\u0438 \u0432\u044B \u0437\u0430\u0431\u044B\u043B\u0438 \u043E \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u043C \u0437\u0430\u043D\u044F\u0442\u0438\u0438 \u0438\u043B\u0438 \u043E\u043F\u0430\u0437\u0434\u044B\u0432\u0430\u0435\u0442\u0435, \u0442\u043E \u0438\u043C\u0435\u0439\u0442\u0435 \u0432\u0432\u0438\u0434\u0443, \u0447\u0442\u043E \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u044C \u0436\u0434\u0435\u0442 \u0432\u0430\u0441 \u043D\u0435 \u0431\u043E\u043B\u0435\u0435 15-\u0442\u0438 \u043C\u0438\u043D\u0443\u0442 \u0438 \u0435\u0441\u043B\u0438 \u043F\u043E \u0438\u0441\u0442\u0435\u0447\u0435\u043D\u0438\u0438 \u044D\u0442\u043E\u0433\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0438 \u0432\u044B \u0442\u0430\u043A \u0438 \u043D\u0435 \u043F\u043E\u044F\u0432\u0438\u043B\u0438\u0441\u044C, \u0442\u043E \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u044C \u0438\u043C\u0435\u0435\u0442 \u043F\u043E\u043B\u043D\u043E\u0435 \u043F\u0440\u0430\u0432\u043E \u043D\u0435 \u0432\u044B\u0445\u043E\u0434\u0438\u0442\u044C \u043D\u0430 \u0441\u0432\u044F\u0437\u044C, \u0430 \u0432\u0430\u0448\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u0431\u0443\u0434\u0435\u0442 \u0441\u0447\u0438\u0442\u0430\u0442\u044C\u0441\u044F \u043F\u0440\u043E\u0432\u0435\u0434\u0435\u043D\u043D\u044B\u043C.\n\n\n\u041F\u0435\u0440\u0435\u0434 \u043F\u043E\u0441\u0435\u0449\u0435\u043D\u0438\u0435\u043C \u043E\u0444\u0438\u0441\u0430 \u0432\u0430\u043C \u043D\u0443\u0436\u043D\u043E \u043E\u0437\u043D\u0430\u043A\u043E\u043C\u0438\u0442\u044C\u0441\u044F \u0441 \u043F\u0440\u0430\u0432\u0438\u043B\u0430\u043C\u0438 \u043F\u043E\u0441\u0435\u0449\u0435\u043D\u0438\u044F \u0446\u0435\u043D\u0442\u0440\u0430 \u0438 \u0441\u0442\u0440\u043E\u0433\u043E \u0438\u043C \u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u044C: \nhttps://docs.google.com/document/d/1UGUCYyg6RZh4WGBn7pncMyrOrfGrzQT_-LMFTvfXWKk/edit?usp=sharing \n\n\u041F\u0440\u0438 \u0443\u0441\u0438\u043B\u0435\u043D\u0438\u0438 \u043A\u0430\u0440\u0430\u043D\u0442\u0438\u043D\u043D\u044B\u0445 \u043C\u0435\u0440 \u0432 \u0433\u043E\u0440\u043E\u0434\u0435 \u0410\u043B\u043C\u0430\u0442\u044B, \u043C\u044B \u0431\u0443\u0434\u0435\u043C \u0432\u044B\u043D\u0443\u0436\u0434\u0435\u043D\u044B \u0437\u0430\u043A\u0440\u044B\u0442\u044C \u0438\u043D\u0434\u0438\u0432\u0438\u0434\u0443\u0430\u043B\u044C\u043D\u044B\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0432 \u043E\u0444\u0438\u0441\u0435.\n\n\n\u041C\u044B \u043D\u0430\u0434\u0435\u0435\u043C\u0441\u044F, \u0447\u0442\u043E \u0434\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E\u043C\u043E\u0433\u0443\u0442 \u0432\u0430\u043C \u043F\u043E\u0434\u0442\u044F\u043D\u0443\u0442\u044C \u0437\u043D\u0430\u043D\u0438\u044F, \u0438 \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043F\u0440\u043E\u0446\u0435\u0441\u0441 \u043F\u043E\u0439\u0434\u0435\u0442 \u0431\u043E\u043B\u0435\u0435 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E.\n\n\u0416\u0435\u043B\u0430\u0435\u043C \u0412\u0430\u043C \u0443\u0441\u043F\u0435\u0445\u043E\u0432!\n\n\n            ";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text, {
+                    return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
                 case 2:
@@ -1595,22 +1544,19 @@ function buildIndividualLessonsAnnounce(lesson) {
 /**
  * Функция для информирования об окончании тестогого периода
  */
-function buildEndOfTestPeriodMessage(lesson) {
+function buildEndOfTestPeriodMessage(groups) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
+        var i, text;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber === 3)) return [3 /*break*/, 3];
-                    text = "\n            \n<b>#\u0412\u0430\u0436\u043D\u043E\u0435\u043E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435</b> \n\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!\n\n\u041C\u044B \u043E\u0447\u0435\u043D\u044C \u043D\u0430\u0434\u0435\u0435\u043C\u0441\u044F, \u0447\u0442\u043E \u0432\u0430\u043C \u043F\u043E\u043D\u0440\u0430\u0432\u0438\u043B\u0441\u044F \u043D\u0430\u0448 \u0444\u043E\u0440\u043C\u0430\u0442 \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u044F \u0438 \u0432\u044B \u0442\u0432\u0435\u0440\u0434\u043E \u0440\u0435\u0448\u0438\u043B\u0438 \u0434\u043B\u044F \u0441\u0435\u0431\u044F, \u0441\u0442\u0430\u0442\u044C \u0420\u0435\u043C\u0431\u043E-\u0440\u0430\u0437\u0440\u0430\u0431\u043E\u0442\u0447\u0438\u043A\u0430\u043C\u0438 \uD83D\uDE0E\n\u041D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u0432\u0430\u043C, \u0447\u0442\u043E \u0432 \u044D\u0442\u0443 \u043F\u044F\u0442\u043D\u0438\u0446\u0443, \u0443 \u0432\u0430\u0441 \u0437\u0430\u043A\u0430\u043D\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0442\u0435\u0441\u0442\u043E\u0432\u044B\u0439 \u043F\u0435\u0440\u0438\u043E\u0434 \u0438 \u0432\u0430\u043C \u0432\u0430\u0436\u043D\u043E \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u0434\u043B\u044F \u0441\u0435\u0431\u044F, \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0435\u0442\u0435 \u043B\u0438 \u0432\u044B \u0443\u0447\u0438\u0442\u044C\u0441\u044F \u261D\uD83C\uDFFB\n\n\u041C\u044B \u0431\u0443\u0434\u0435\u043C \u0440\u0430\u0434\u044B \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u0447\u0435\u0441\u0442\u0432\u0443 \u0441 \u0432\u0430\u043C\u0438, \u0438 \u043F\u0440\u0438\u0433\u043B\u0430\u0448\u0430\u0435\u043C \u0432\u0430\u0441 \u0432 \u0443\u0434\u0438\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043C\u0438\u0440 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F. \n\u041C\u044B \u043F\u043E\u0434\u0441\u043A\u0430\u0436\u0435\u043C \u0432\u0430\u043C \u043A\u0430\u043A \u043F\u0440\u0435\u043E\u0434\u043E\u043B\u0435\u0442\u044C \u0432\u0441\u0435 \u043F\u0440\u0435\u0433\u0440\u0430\u0434\u044B, \u043D\u0430 \u043F\u0443\u0442\u0438 \u043A \u0432\u0430\u0448\u0435\u0439 \u0446\u0435\u043B\u0438!\n\n\u0427\u0442\u043E\u0431\u044B \u0432\u043E\u0439\u0442\u0438 \u0432 \u043D\u0430\u0448\u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0443, \u0432\u0430\u0436\u043D\u043E \u0434\u043E \u0432\u0435\u0447\u0435\u0440\u0430 \u043F\u044F\u0442\u043D\u0438\u0446\u044B \u0434\u043E 18-00 \u0432\u043D\u0435\u0441\u0442\u0438 \u0434\u043E\u043F\u043B\u0430\u0442\u0443 \u0437\u0430 \u043F\u0435\u0440\u0432\u044B\u0439 \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043C\u0435\u0441\u044F\u0446. \u041E\u043F\u043B\u0430\u0442\u0443 \u043C\u043E\u0436\u043D\u043E \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0441\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 :\n1. \u0427\u0435\u0440\u0435\u0437 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u041A\u0430\u0441\u043F\u0438 \u0431\u0430\u043D\u043A - \u0441\u0430\u043C\u044B\u0439 \u0443\u0434\u043E\u0431\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442;\n2. \u0427\u0435\u0440\u0435\u0437 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0425\u0430\u043B\u044B\u043A \u0411\u0430\u043D\u043A;\n3. \u041D\u0430\u043B\u0438\u0447\u043D\u044B\u043C\u0438 \u0432 \u043E\u0444\u0438\u0441\u0435;\n4. \u0427\u0435\u0440\u0435\u0437 \u043C\u043E\u0431\u0438\u043B\u044C\u043D\u044B\u0439 \u043F\u043B\u0430\u0442\u0435\u0436\u043D\u044B\u0439 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B \u0410\u043B\u044C\u0444\u0430 pay \u0432 \u043D\u0430\u0448\u0435\u043C \u043E\u0444\u0438\u0441\u0435.\n\n\n\u0412\u0430\u0436\u043D\u043E\u2757\uFE0F \n\u041F\u043E\u0441\u043B\u0435 \u043E\u043F\u043B\u0430\u0442\u044B, \u043F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0441\u043A\u0438\u043D\u044C\u0442\u0435 \u043A\u0432\u0438\u0442\u0430\u043D\u0446\u0438\u044E \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 " + config_1.config.accountant + " , \u0442.\u043A. \u043C\u044B \u0443\u0432\u0438\u0434\u0438\u043C \u0432\u0430\u0448\u0443 \u043E\u043F\u043B\u0430\u0442\u0443 \u0432 \u043D\u0430\u0448\u0435\u0439 \u0432\u044B\u043F\u0438\u0441\u043A\u0435 \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0434\u0435\u043D\u044C.\n\n\u0412 \u043F\u044F\u0442\u043D\u0438\u0446\u0443 \u043F\u043E\u0441\u043B\u0435 18-00 \u043C\u044B \u043E\u0442\u043A\u043B\u044E\u0447\u0430\u0435\u043C \u0434\u043E\u0441\u0442\u0443\u043F \u0440\u0435\u0431\u044F\u0442\u0430\u043C \u043A\u0442\u043E \u0440\u0435\u0448\u0438\u043B \u043D\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0442\u044C \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u0435. \u041E \u0441\u0432\u043E\u0435\u043C \u0440\u0435\u0448\u0435\u043D\u0438\u0438 \u043F\u0440\u0438\u043E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u0435 \u043A\u0430\u043A \u043C\u043E\u0436\u043D\u043E \u0440\u0430\u043D\u044C\u0448\u0435 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430 \u0432 \u043B\u0438\u0447\u043A\u0443 \u0410\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u043E\u0440\u0443 \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B " + lesson[i].groupAdmin + ".\n\n\u0412\u0441\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B, \u043A\u0430\u0441\u0430\u044E\u0449\u0438\u0435\u0441\u044F \u043E\u0441\u0442\u0430\u0442\u043A\u043E\u0432 \u043F\u043E \u043E\u043F\u043B\u0430\u0442\u0435, \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u0445 \u043E\u043F\u043B\u0430\u0442\u044B \u0438 \u043F\u0440\u043E\u0447\u0438\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B, \u043D\u0435 \u043A\u0430\u0441\u0430\u044E\u0449\u0438\u0435\u0441\u044F \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F, \u0437\u0430\u0434\u0430\u0432\u0430\u0439\u0442\u0435 \u0432 \u043B\u0438\u0447\u043A\u0443 " + config_1.config.accountant + ".\n\n            ";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text, {
+                    if (!(i < groups.length)) return [3 /*break*/, 4];
+                    if (!(groups[i].currentWeek === 1 && groups[i].isActive)) return [3 /*break*/, 3];
+                    text = "\n            \n<b>#\u0412\u0430\u0436\u043D\u043E\u0435\u043E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435</b> \n\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!\n\n\u041C\u044B \u043E\u0447\u0435\u043D\u044C \u043D\u0430\u0434\u0435\u0435\u043C\u0441\u044F, \u0447\u0442\u043E \u0432\u0430\u043C \u043F\u043E\u043D\u0440\u0430\u0432\u0438\u043B\u0441\u044F \u043D\u0430\u0448 \u0444\u043E\u0440\u043C\u0430\u0442 \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u044F \u0438 \u0432\u044B \u0442\u0432\u0435\u0440\u0434\u043E \u0440\u0435\u0448\u0438\u043B\u0438 \u0434\u043B\u044F \u0441\u0435\u0431\u044F, \u0441\u0442\u0430\u0442\u044C \u0420\u0435\u043C\u0431\u043E-\u0440\u0430\u0437\u0440\u0430\u0431\u043E\u0442\u0447\u0438\u043A\u0430\u043C\u0438 \uD83D\uDE0E\n\u041D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u0432\u0430\u043C, \u0447\u0442\u043E \u0432 \u044D\u0442\u0443 \u043F\u044F\u0442\u043D\u0438\u0446\u0443, \u0443 \u0432\u0430\u0441 \u0437\u0430\u043A\u0430\u043D\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0442\u0435\u0441\u0442\u043E\u0432\u044B\u0439 \u043F\u0435\u0440\u0438\u043E\u0434 \u0438 \u0432\u0430\u043C \u0432\u0430\u0436\u043D\u043E \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u0434\u043B\u044F \u0441\u0435\u0431\u044F, \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0435\u0442\u0435 \u043B\u0438 \u0432\u044B \u0443\u0447\u0438\u0442\u044C\u0441\u044F \u261D\uD83C\uDFFB\n\n\u041C\u044B \u0431\u0443\u0434\u0435\u043C \u0440\u0430\u0434\u044B \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u0447\u0435\u0441\u0442\u0432\u0443 \u0441 \u0432\u0430\u043C\u0438, \u0438 \u043F\u0440\u0438\u0433\u043B\u0430\u0448\u0430\u0435\u043C \u0432\u0430\u0441 \u0432 \u0443\u0434\u0438\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u043C\u0438\u0440 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F. \n\u041C\u044B \u043F\u043E\u0434\u0441\u043A\u0430\u0436\u0435\u043C \u0432\u0430\u043C \u043A\u0430\u043A \u043F\u0440\u0435\u043E\u0434\u043E\u043B\u0435\u0442\u044C \u0432\u0441\u0435 \u043F\u0440\u0435\u0433\u0440\u0430\u0434\u044B, \u043D\u0430 \u043F\u0443\u0442\u0438 \u043A \u0432\u0430\u0448\u0435\u0439 \u0446\u0435\u043B\u0438!\n\n\u0427\u0442\u043E\u0431\u044B \u0432\u043E\u0439\u0442\u0438 \u0432 \u043D\u0430\u0448\u0443 \u043A\u043E\u043C\u0430\u043D\u0434\u0443, \u0432\u0430\u0436\u043D\u043E \u0434\u043E \u0432\u0435\u0447\u0435\u0440\u0430 \u043F\u044F\u0442\u043D\u0438\u0446\u044B \u0434\u043E 18-00 \u0432\u043D\u0435\u0441\u0442\u0438 \u0434\u043E\u043F\u043B\u0430\u0442\u0443 \u0437\u0430 \u043F\u0435\u0440\u0432\u044B\u0439 \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043C\u0435\u0441\u044F\u0446. \u041E\u043F\u043B\u0430\u0442\u0443 \u043C\u043E\u0436\u043D\u043E \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0441\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 :\n1. \u0427\u0435\u0440\u0435\u0437 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u041A\u0430\u0441\u043F\u0438 \u0431\u0430\u043D\u043A - \u0441\u0430\u043C\u044B\u0439 \u0443\u0434\u043E\u0431\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442;\n2. \u0427\u0435\u0440\u0435\u0437 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0425\u0430\u043B\u044B\u043A \u0411\u0430\u043D\u043A;\n3. \u041D\u0430\u043B\u0438\u0447\u043D\u044B\u043C\u0438 \u0432 \u043E\u0444\u0438\u0441\u0435;\n4. \u0427\u0435\u0440\u0435\u0437 \u043C\u043E\u0431\u0438\u043B\u044C\u043D\u044B\u0439 \u043F\u043B\u0430\u0442\u0435\u0436\u043D\u044B\u0439 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B \u0410\u043B\u044C\u0444\u0430 pay \u0432 \u043D\u0430\u0448\u0435\u043C \u043E\u0444\u0438\u0441\u0435.\n\n\n\u0412\u0430\u0436\u043D\u043E\u2757\uFE0F \n\u041F\u043E\u0441\u043B\u0435 \u043E\u043F\u043B\u0430\u0442\u044B, \u043F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \u0441\u043A\u0438\u043D\u044C\u0442\u0435 \u043A\u0432\u0438\u0442\u0430\u043D\u0446\u0438\u044E \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 " + config_1.config.accountant + " , \u0442.\u043A. \u043C\u044B \u0443\u0432\u0438\u0434\u0438\u043C \u0432\u0430\u0448\u0443 \u043E\u043F\u043B\u0430\u0442\u0443 \u0432 \u043D\u0430\u0448\u0435\u0439 \u0432\u044B\u043F\u0438\u0441\u043A\u0435 \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0434\u0435\u043D\u044C.\n\n\u0412 \u043F\u044F\u0442\u043D\u0438\u0446\u0443 \u043F\u043E\u0441\u043B\u0435 18-00 \u043C\u044B \u043E\u0442\u043A\u043B\u044E\u0447\u0430\u0435\u043C \u0434\u043E\u0441\u0442\u0443\u043F \u0440\u0435\u0431\u044F\u0442\u0430\u043C \u043A\u0442\u043E \u0440\u0435\u0448\u0438\u043B \u043D\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0442\u044C \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u0435. \u041E \u0441\u0432\u043E\u0435\u043C \u0440\u0435\u0448\u0435\u043D\u0438\u0438 \u043F\u0440\u0438\u043E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u0435 \u043A\u0430\u043A \u043C\u043E\u0436\u043D\u043E \u0440\u0430\u043D\u044C\u0448\u0435 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430 \u0432 \u043B\u0438\u0447\u043A\u0443 \u0410\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u043E\u0440\u0443 \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B " + groups[i].groupAdmin + ".\n\n\u0412\u0441\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B, \u043A\u0430\u0441\u0430\u044E\u0449\u0438\u0435\u0441\u044F \u043E\u0441\u0442\u0430\u0442\u043A\u043E\u0432 \u043F\u043E \u043E\u043F\u043B\u0430\u0442\u0435, \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u0445 \u043E\u043F\u043B\u0430\u0442\u044B \u0438 \u043F\u0440\u043E\u0447\u0438\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B, \u043D\u0435 \u043A\u0430\u0441\u0430\u044E\u0449\u0438\u0435\u0441\u044F \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F, \u0437\u0430\u0434\u0430\u0432\u0430\u0439\u0442\u0435 \u0432 \u043B\u0438\u0447\u043A\u0443 " + config_1.config.accountant + ".\n\n            ";
+                    return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
                 case 2:
@@ -1628,22 +1574,19 @@ function buildEndOfTestPeriodMessage(lesson) {
  * Функция для напоминания об оплате, отрабатывает после первого первого занятия после контрольной
  * И для сообщения о дедлайне оплвты, отрабатывает в пятницу следующей недели после контрольной, не отрабатывает во время каникул
  */
-function buildEndOfTestPeriodFinalLastMessage(lesson) {
+function buildEndOfTestPeriodFinalLastMessage(groups) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
+        var i, text;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber === 5)) return [3 /*break*/, 3];
+                    if (!(i < groups.length)) return [3 /*break*/, 4];
+                    if (!(groups[i].currentWeek === 1 && groups[i].isActive)) return [3 /*break*/, 3];
                     text = "\n\n<b>#\u0412\u0430\u0436\u043D\u043E\u0435\u043E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435</b> \n            \n\u0421\u0435\u0433\u043E\u0434\u043D\u044F \u043F\u043E\u0441\u043B\u0435 18-00 \u043C\u044B \u043E\u0442\u043A\u043B\u044E\u0447\u0430\u0435\u043C \u0434\u043E\u0441\u0442\u0443\u043F \u0440\u0435\u0431\u044F\u0442\u0430\u043C \u043A\u0442\u043E \u0440\u0435\u0448\u0438\u043B \u043D\u0435 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0442\u044C \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u0435. \n\u0412\u0441\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B, \u043A\u0430\u0441\u0430\u044E\u0449\u0438\u0435\u0441\u044F \u043E\u0441\u0442\u0430\u0442\u043A\u043E\u0432 \u043F\u043E \u043E\u043F\u043B\u0430\u0442\u0435, \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u0445 \u043E\u043F\u043B\u0430\u0442\u044B \u0438 \u043F\u0440\u043E\u0447\u0438\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B, \u043D\u0435 \u043A\u0430\u0441\u0430\u044E\u0449\u0438\u0435\u0441\u044F \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F, \u0437\u0430\u0434\u0430\u0432\u0430\u0439\u0442\u0435 \u0432 \u043B\u0438\u0447\u043A\u0443 " + config_1.config.accountant + ".\n\n            ";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text, {
+                    return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
                 case 2:
@@ -1660,22 +1603,19 @@ function buildEndOfTestPeriodFinalLastMessage(lesson) {
 /**
  * Функция для информирования о важности сдавать домашки в срок и что скидку получают те, кто набирает свыше 95 баллов
  */
-function buildMessageAboutDiscountAndDeadlines(lesson) {
+function buildMessageAboutDiscountAndDeadlines(groups) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
+        var i, text;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber === 5)) return [3 /*break*/, 3];
+                    if (!(i < groups.length)) return [3 /*break*/, 4];
+                    if (!(groups[i].currentWeek === 2 && groups[i].isActive)) return [3 /*break*/, 3];
                     text = "\n            \n<b>#\u041D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C</b>\n\u041F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430, \uD83D\uDCE3\u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u043E\uD83D\uDCE3 \u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u0438 \u0441\u0434\u0430\u0432\u0430\u0439\u0442\u0435 \u0432 \u0441\u0440\u043E\u043A \u0434\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u044F (\u0414\u0417) , \u0442.\u043A \u0432\u0430\u0448\u0430 \u0438\u0442\u043E\u0433\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u043C\u0435\u0441\u044F\u0446 \u0444\u043E\u0440\u043C\u0438\u0440\u0443\u0435\u0442\u0441\u044F \u0438\u0437 40% \u043E\u0442 \u043E\u0446\u0435\u043D\u043E\u043A \u0437\u0430 \u0414\u0417 + 50% \u043E\u0442 \u043E\u0446\u0435\u043D\u043A\u0438 \u0437\u0430 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0443\u044E + 10% \u043E\u0442 \u043F\u043E\u0441\u0435\u0449\u0430\u0435\u043C\u043E\u0441\u0442\u0438. \n\u041D\u0435 \u0437\u0430\u0431\u044B\u0432\u0430\u0439\u0442\u0435 \u043E \u0441\u043A\u0438\u0434\u043A\u0435 \uD83E\uDD29 \u0437\u0430 \u043E\u0442\u043B\u0438\u0447\u043D\u0443\u044E \u0443\u0447\u0435\u0431\u0443 \u0432\u044B \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0435 \u0432 \u0442\u043E\u043C \u0441\u043B\u0443\u0447\u0430\u0435, \u043A\u043E\u0433\u0434\u0430 \u0432\u0430\u0448\u0430 \u0438\u0442\u043E\u0433\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430 - \"\u043E\u0442\u043B\u0438\u0447\u043D\u043E\" \u0431\u043E\u043B\u0435\u0435 95 \u0431\u0430\u043B\u043B\u043E\u0432.\n\n\n            ";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text, {
+                    return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
                 case 2:
@@ -1692,22 +1632,19 @@ function buildMessageAboutDiscountAndDeadlines(lesson) {
 /**
  * Функция для пожелания удачи перед первой контрольной
  */
-function buildWishGoodLuckMessageForFirstExam(lesson) {
+function buildWishGoodLuckMessageForFirstExam(groups) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
+        var i, text;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber === 8 || lesson[i].lessonNumber === 9)) return [3 /*break*/, 3];
+                    if (!(i < groups.length)) return [3 /*break*/, 4];
+                    if (!(groups[i].currentWeek === 3 && groups[i].isActive)) return [3 /*break*/, 3];
                     text = "\n<b>\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!</b>\n\u0425\u043E\u0442\u0438\u043C \u043F\u043E\u0436\u0435\u043B\u0430\u0442\u044C \u0432\u0430\u043C \u0443\u0441\u043F\u0435\u0445\u0430 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430\u0448\u043D\u0435\u0439 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u043E\u0439! \u0412\u044B \u0441\u043F\u0440\u0430\u0432\u0438\u0442\u0435\u0441\u044C!\n\n\u041E\u0431\u0440\u0430\u0449\u0430\u0435\u043C \u0432\u0430\u0448\u0435 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u043D\u0430 \u0442\u043E, \u0447\u0442\u043E \u043D\u0430 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0443\u044E \u0443 \u0432\u0430\u0441 \u0432\u044B\u0434\u0435\u043B\u044F\u0435\u0442\u0441\u044F \u0441\u0442\u0440\u043E\u0433\u043E \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u043D\u043E\u0435 \u0432\u0440\u0435\u043C\u044F \u0441 11-00 \u0434\u043E 19-00, \u0442\u043E \u0435\u0441\u0442\u044C 8 \u0447\u0430\u0441\u043E\u0432. \n\u0412 19-00 \u0432\u044B \u0434\u043E\u043B\u0436\u043D\u044B \u0441\u0434\u0430\u0442\u044C \u0432\u0430\u0448\u0443 \u0440\u0430\u0431\u043E\u0442\u0443, \u0432\u043D\u0435 \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E\u0441\u0442\u0438 \u043E\u0442 \u0442\u043E\u0433\u043E, \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0438 \u0432\u044B \u043F\u0440\u043E\u0435\u043A\u0442 \u0438\u043B\u0438 \u043D\u0435\u0442. \u0420\u0430\u0431\u043E\u0442\u044B \u0441\u0434\u0430\u043D\u043D\u044B\u0435 \u043F\u043E\u0441\u043B\u0435 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0430 \u0431\u0443\u0434\u0443\u0442 \u0448\u0442\u0440\u0430\u0444\u043E\u0432\u0430\u0442\u044C\u0441\u044F \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u043C \u0441\u043D\u0438\u0436\u0435\u043D\u0438\u0435\u043C \u0431\u0430\u043B\u043B\u043E\u0432.\n\n            ";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text, {
+                    return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
                 case 2:
@@ -1724,22 +1661,19 @@ function buildWishGoodLuckMessageForFirstExam(lesson) {
 /**
  * Функция для поздравлений после первой контрольной
  */
-function buildCongratulationMessageAfterFirstExam(lesson) {
+function buildCongratulationMessageAfterFirstExam(groups) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
+        var i, text;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber === 9)) return [3 /*break*/, 3];
+                    if (!(i < groups.length)) return [3 /*break*/, 4];
+                    if (!(groups[i].currentWeek === 4 && groups[i].isActive)) return [3 /*break*/, 3];
                     text = "\n<b>#\u041E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435</b>\n\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442!\n\u0412 \u043F\u0440\u043E\u0448\u0435\u0434\u0448\u0443\u044E \u0441\u0443\u0431\u0431\u043E\u0442\u0443 \u0432\u044B \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438 \u0441\u0432\u043E\u044E \u043F\u0435\u0440\u0432\u0443\u044E \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0443\u044E, \u0434\u0430\u0436\u0435 \u043D\u0435 \u0432\u0435\u0440\u0438\u0442\u0441\u044F, \u0447\u0442\u043E \u0443\u0436\u0435 \u043F\u0440\u043E\u0448\u0435\u043B \u0446\u0435\u043B\u044B\u0439 \u043C\u0435\u0441\u044F\u0446 \u0432\u0430\u0448\u0435\u0433\u043E \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0438\u0432\u043D\u043E\u0433\u043E \u0438 \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u043E\u0433\u043E \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u044F.\n\u0412\u044B \u0431\u043E\u043B\u044C\u0448\u0438\u0435 \u043C\u043E\u043B\u043E\u0434\u0446\u044B, \u0438 \u043C\u044B \u043D\u0430\u0434\u0435\u0435\u043C\u0441\u044F, \u0447\u0442\u043E \u0432\u044B \u0432\u0441\u0435 \u0445\u043E\u0440\u043E\u0448\u043E \u0441\u043F\u0440\u0430\u0432\u0438\u043B\u0438\u0441\u044C\u263A\uFE0F\n\n            ";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text, {
+                    return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
                 case 2:
@@ -1756,22 +1690,19 @@ function buildCongratulationMessageAfterFirstExam(lesson) {
 /**
  * Функция напоминание об академической честности
  */
-function buildCheatingIsBadMessage(lesson) {
+function buildCheatingIsBadMessage(groups) {
     return __awaiter(this, void 0, void 0, function () {
-        var i, holiday, text;
+        var i, text;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     i = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(i < lesson.length)) return [3 /*break*/, 4];
-                    holiday = isHoliday(lesson[i].holidayOne, lesson[i].holidayTwo);
-                    if (holiday)
-                        return [3 /*break*/, 3];
-                    if (!(lesson[i].lessonNumber === 9 || lesson[i].lessonNumber === 17)) return [3 /*break*/, 3];
+                    if (!(i < groups.length)) return [3 /*break*/, 4];
+                    if (!((groups[i].currentWeek === 4 || groups[i].currentWeek === 8) && groups[i].isActive)) return [3 /*break*/, 3];
                     text = "\n<b>#\u0412\u0430\u0436\u043D\u0430\u044F\u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044F \uD83D\uDE0C</b>\n\n\uD83D\uDEA8\u041D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u0432\u0430\u043C \u043F\u0440\u043E \u0410\u043A\u0430\u0434\u0435\u043C\u0438\u0447\u0435\u0441\u043A\u0443\u044E \u0447\u0435\u0441\u0442\u043D\u043E\u0441\u0442\u044C\n\u041C\u044B \u043E\u0447\u0435\u043D\u044C \u0441\u0435\u0440\u044C\u0435\u0437\u043D\u043E \u043E\u0442\u043D\u043E\u0441\u0438\u043C\u0441\u044F \u043A \u0430\u043A\u0430\u0434\u0435\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0447\u0435\u0441\u0442\u043D\u043E\u0441\u0442\u0438 \u0438 \u0434\u043B\u044F \u043D\u0430\u0441 \u0441\u043F\u0438\u0441\u044B\u0432\u0430\u043D\u0438\u0435 - \u044D\u0442\u043E \u0441\u0442\u0440\u0430\u0448\u043D\u044B\u0439 \u0433\u0440\u0435\u0445\u2757\uFE0F\n\n\u0423 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u044F \u0435\u0441\u0442\u044C \u043F\u043E\u043B\u043D\u043E\u0435 \u043F\u0440\u0430\u0432\u043E \u0437\u0430\u043F\u043E\u0434\u043E\u0437\u0440\u0438\u0442\u044C \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u0430 \u0432 \u0441\u043F\u0438\u0441\u044B\u0432\u0430\u043D\u0438\u0438 \u0438 \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C 0 \u0431\u0430\u043B\u043B\u043E\u0432. \u0422\u0430\u043A\u0436\u0435 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u044C \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u043E \u0441\u043E\u043E\u0431\u0449\u0430\u0435\u0442 \u043E\u0431 \u044D\u0442\u043E\u043C \u0444\u0430\u043A\u0442\u0435 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438, \u0438 \u0441\u0442\u0443\u0434\u0435\u043D\u0442 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u043E\u0442\u0447\u0438\u0441\u043B\u0435\u043D \u0434\u0430\u0436\u0435 \u0437\u0430 \u0435\u0434\u0438\u043D\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0439 \u043F\u0440\u0435\u0446\u0435\u0434\u0435\u043D\u0442 \u0431\u0435\u0437 \u043F\u0440\u0430\u0432\u0430 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F\u203C\uFE0F\n\n\u2666\uFE0F \u0415\u0441\u043B\u0438 \u0432\u044B \u0441\u043F\u0438\u0441\u0430\u043B\u0438 \u0434\u043E\u043C\u0430\u0448\u043A\u0443 / \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0443\u044E \u0441 \u0418\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0430 - 0 \u0431\u0430\u043B\u043B\u043E\u0432.\n\n\u2666\uFE0F \u0415\u0441\u043B\u0438 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u0439 \u043A\u043E\u0434 \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0443 \u0434\u0432\u0443\u0445 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u043E\u0432 - \u043E\u0431\u0430 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E\u0435 \u043D\u0430\u043A\u0430\u0437\u0430\u043D\u0438\u0435 - 0 \u0431\u0430\u043B\u043B\u043E\u0432.\n\n\u0422\u043E\u0442 \u043A\u0442\u043E \u0441\u043F\u0438\u0441\u0430\u043B, \u0432 \u0431\u0443\u0434\u0443\u0449\u0435\u043C \u0441\u0442\u043E\u043B\u043A\u043D\u0443\u0432\u0448\u0438\u0441\u044C \u0441 \u0437\u0430\u0434\u0430\u0447\u0435\u0439, \u043D\u0435 \u0441\u043C\u043E\u0436\u0435\u0442 \u0441\u0430\u043C\u043E\u0441\u0442\u043E\u044F\u0442\u0435\u043B\u044C\u043D\u043E \u0435\u0435 \u0440\u0435\u0448\u0438\u0442\u044C.\n\u0422\u043E\u0442 \u043A\u0442\u043E \u0434\u0430\u043B \u0441\u043F\u0438\u0441\u0430\u0442\u044C \u043D\u0435 \u0441\u0434\u0435\u043B\u0430\u043B \u0434\u043E\u0431\u0440\u043E, \u043E\u043D \u043B\u0438\u0448\u0438\u043B \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438 \u043D\u0430\u0443\u0447\u0438\u0442\u044C\u0441\u044F  \u0440\u0435\u0448\u0430\u0442\u044C \u0437\u0430\u0434\u0430\u0447\u0438 \u0441\u0432\u043E\u0435\u043C\u0443 \u043A\u043E\u043B\u043B\u0435\u0433\u0435. \n\n \u042D\u0442\u043E \u043D\u0435\u0447\u0435\u0441\u0442\u043D\u043E \u043F\u043E \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u044E \u043A \u0446\u0435\u043D\u0442\u0440\u0443 \u0438 \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u043C \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u0430\u043C, \u044D\u0442\u043E \u0444\u043E\u0440\u043C\u0438\u0440\u0443\u0435\u0442 \u043D\u0435\u043F\u0440\u043E\u0444\u0435\u0441\u0441\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435 \u043F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u0438 \u043C\u0435\u0448\u0430\u0435\u0442 \u0432\u0430\u043C \u0441\u0442\u0430\u0442\u044C \u0432\u043E\u0441\u0442\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u043D\u044B\u043C \u0440\u0430\u0437\u0440\u0430\u0431\u043E\u0442\u0447\u0438\u043A\u043E\u043C \u0432 \u0431\u0443\u0434\u0443\u0449\u0435\u043C.\n\n            ";
-                    return [4 /*yield*/, bot.sendMessage(lesson[i].chatId, text, {
+                    return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
                 case 2:
@@ -1786,20 +1717,6 @@ function buildCheatingIsBadMessage(lesson) {
     });
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/**
- * Функция для проверки идут ли каникулы или нет, пропускает оповещения, счетчики занятий не растут. Возвращает булевое значение, и каждый раз перед отправкой
- * сообщения мы проверяем каникулы ли или нет.
- * Важно помнить, что если не поставить эту проверку в оповещение об оплате, то есть риск, что во время каникул людей будут дергать сообщениями об оплате
- */
-function isHoliday(dateOne, dateTwo) {
-    var today = moment_1.default();
-    var checkDateOne = buildMomentDate(dateOne);
-    var checkDateTwo = buildMomentDate(dateTwo);
-    if ((today > checkDateOne && today < checkDateOne.add(6, "days")) || (today > checkDateTwo && today < checkDateTwo.add(6, "days"))) {
-        return true;
-    }
-    return false;
-}
 /**
  * Функция для составления даты под moment
  */
