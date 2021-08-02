@@ -19,7 +19,8 @@
     "moment": "^2.29.1",
     "mongoose": "^5.12.3",
     "node-schedule": "^2.0.0",
-    "node-telegram-bot-api": "^0.52.0"
+    "node-telegram-bot-api": "^0.52.0",
+    "tslog": "^3.2.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.11",

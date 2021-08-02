@@ -13,3 +13,4 @@ exports.config = {
     telegramPort: 8001,
     accountant: "Динаре @attractor_almaty22" // лучше писать в родительском падеже, так как в сообщениях группам там имено Кому Чему обращаться по поводу оплаты и прочего бухгалтерского
 };
+//# sourceMappingURL=config.js.map

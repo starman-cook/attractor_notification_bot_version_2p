@@ -24,3 +24,4 @@ var GroupSchema = new Schema({
     }
 });
 exports.Group = mongoose_1.default.model('groups', GroupSchema);
+//# sourceMappingURL=group_model.js.map

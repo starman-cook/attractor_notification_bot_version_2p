@@ -7,6 +7,9 @@ import {Group} from "./app/models/group_model";
 import schedule from 'node-schedule'
 import moment from 'moment'
 import {GroupInterface} from './app/interfaces/group_interface'
+import { ILogObject, Logger } from "tslog";
+import * as path from "path";
+import * as fs from "fs";
 
 
 /**
@@ -16,8 +19,43 @@ import {GroupInterface} from './app/interfaces/group_interface'
  СДЕЛАНО 4) TODO Удаление групп
  СДЕЛАНО 5) TODO Базовые сообщения от админимстрации
  СДЕЛАНО 6) TODO Инструкцию написать
- 7) TODO Подумать может еще что добавить...
+ 7) TODO Логгирование с десктопным просмотром логов и выгрузкой файлов
+ 8) TODO Подумать может еще что добавить...
  */
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Запись логгов в файлы, файлы записывыются в папки по датам, название папки идет как дата в формате DD_MM_YYYY
+ * @param logObject
+ */
+function logToTransport(logObject: ILogObject) {
+    const date = moment().format("DD_MM_YYYY")
+    const dir = `./logs/${date}`;
+    if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir);
+    } else {
+        fs.appendFileSync(path.join(__dirname, `/logs/${date}/logs.txt`), JSON.stringify(logObject) + "\n");
+    }
+}
+
+const logger: Logger = new Logger();
+logger.attachTransport(
+    {
+        silly: logToTransport,
+        debug: logToTransport,
+        trace: logToTransport,
+        info: logToTransport,
+        warn: logToTransport,
+        error: logToTransport,
+        fatal: logToTransport,
+    },
+    "silly"
+);
+
+// logger.debug("I am a debug log.");
+// logger.info("I am an info log.");
+// logger.warn("I am a warn log with a json object:", { foo: "bar" });
+// logger.warn("I am a warn log with a json object:", { foo: "bar" });
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -29,9 +67,11 @@ mongoose.connect(config.mongoUrl.url + config.mongoUrl.db, {
 })
     .then(() => {
         console.log("Mongo connected")
+        logger.info("Mongo connected")
     })
     .catch(err => {
         console.log(err)
+        logger.fatal("Mongoose connection failed. " + err)
     })
 
 /**
@@ -40,8 +80,10 @@ mongoose.connect(config.mongoUrl.url + config.mongoUrl.db, {
 const app: express.Application = express();
 app.use(cors())
 app.use(express.json())
+app.use(express.static('logs'))
 app.listen(config.telegramPort, () => {
     console.log('connected to port ' + config.telegramPort)
+    logger.info('Express started on port ' + config.telegramPort)
 })
 
 /**
@@ -57,6 +99,12 @@ const bot = new TelegramBot(config.telegramToken, {
     }
 })
 
+if (bot) {
+    logger.info("Bot started, token is " + config.telegramToken)
+} else {
+    logger.fatal("Bot didn't start, something went wrong")
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -70,6 +118,7 @@ let dateOnFriday;
  * Понедельник
  */
 schedule.scheduleJob("1 0 13 * * 1", async () => {
+    logger.info("Monday 13:00 start")
     const groups = await Group.find()
     dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(5, "days").format("DD-MM-YYYY")
@@ -81,22 +130,26 @@ schedule.scheduleJob("1 0 13 * * 1", async () => {
     await buildMessageAboutDiscountAndDeadlines(groups)
     await buildCongratulationMessageAfterFirstExam(groups)
     await buildCheatingIsBadMessage(groups)
+    logger.info("Monday 13:00 end")
 
 })
 
 // Здесь идет прибаление недель, в самом начале понедельника, в 00:00 00минут 01 секунд и проверка на каникулы, если каникулы, то группа деактивируется и все
 schedule.scheduleJob("1 0 0 * * 1", async () => {
+    logger.info("Monday 00:00 start")
     const groups = await Group.find()
     await incrementWeek(groups)
     for (let i = 0; i < groups.length; i++) {
         await isHoliday(groups[i])
     }
+    logger.info("Monday 00:00 end")
 })
 
 /**
  * Вторник
  */
 schedule.scheduleJob("1 0 13 * * 2", async () => {
+    logger.info("Tuesday 13:00 start")
     const groups = await Group.find()
     dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(4, "days").format("DD-MM-YYYY")
@@ -105,11 +158,13 @@ schedule.scheduleJob("1 0 13 * * 2", async () => {
     await buildComingExamMessage(groups, dateOfNextSaturday)
     await buildPaySoonMessage(groups, dateOnFriday)
     await buildVisitAttractorMessage(groups)
+    logger.info("Tuesday 13:00 end")
 })
 /**
  * Среда
  */
 schedule.scheduleJob("1 0 13 * * 3", async () => {
+    logger.info("Wednesday 13:00 start")
     const groups = await Group.find()
     dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(3, "days").format("DD-MM-YYYY")
@@ -117,11 +172,13 @@ schedule.scheduleJob("1 0 13 * * 3", async () => {
     await buildWebinarMessage(groups, 3)
     await buildComingExamMessage(groups, dateOfNextSaturday)
     await buildPaySoonMessage(groups, dateOnFriday)
+    logger.info("Wednesday 13:00 end")
 })
 /**
  * Четверг
  */
 schedule.scheduleJob("1 0 13 * * 4", async () => {
+    logger.info("Thursday 13:00 start")
     const groups = await Group.find()
     dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(2, "days").format("DD-MM-YYYY")
@@ -130,11 +187,13 @@ schedule.scheduleJob("1 0 13 * * 4", async () => {
     await buildComingExamMessage(groups, dateOfNextSaturday)
     await buildPaySoonMessage(groups, dateOnFriday)
     await buildIndividualLessonsAnnounce(groups)
+    logger.info("Thursday 13:00 end")
 })
 /**
  * Пятница
  */
 schedule.scheduleJob("1 0 13 * * 5", async () => {
+    logger.info("Friday 13:00 start")
     const groups = await Group.find()
     dateOfNextSaturday = moment().add(1, "days").format("DD-MM-YYYY")
     await buildLessonMessage(groups, 5)
@@ -142,20 +201,25 @@ schedule.scheduleJob("1 0 13 * * 5", async () => {
     await buildComingExamMessage(groups, dateOfNextSaturday)
     await buildPayTodayMessage(groups)
     await buildEndOfTestPeriodFinalLastMessage(groups)
+    logger.info("Friday 13:00 end")
 })
 
 schedule.scheduleJob("1 0 18 * * 5", async () => {
+    logger.info("Friday 18:00 start")
     const groups = await Group.find()
     await buildWishGoodLuckMessageForFirstExam(groups)
+    logger.info("Friday 18:00 end")
 })
 /**
  * Суббота
  */
 schedule.scheduleJob("1 0 10 * * 6", async () => {
+    logger.info("Saturday 13:00 start")
     const groups = await Group.find()
     await buildLessonMessage(groups, 6)
     await buildWebinarMessage(groups, 6)
     await buildTodayExamMessage(groups)
+    logger.info("Saturday 13:00 end")
 })
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -164,8 +228,11 @@ schedule.scheduleJob("1 0 10 * * 6", async () => {
  * если вызвать функцию вновь, то предыдущая модель группы с данными будет удалена и на ее место встанет новая
  */
 bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
+    logger.info("Start of /build_ command to create new group")
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -181,6 +248,7 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
         }
         if (admin) {
             try {
+                logger.info("User " + user + " is using /build_ command")
                 const oldGroup = await Group.findOne({chatId: msg.chat.id})
                 if (oldGroup) {
                     oldGroup.delete()
@@ -228,9 +296,11 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString())
                 }, 20000)
             } catch(err) {
+                logger.fatal("Something crashed in /build_ command, last user was " + user)
                 await bot.sendMessage(msg.chat.id, "Неверный ввод")
             }
         } else {
+            logger.info("User " + user + " is not admin, and is trying to use /build_ command")
             const funnyResponse = `
 <b>Катаны звуки</b>
 <b>Самурай промахнулся</b>
@@ -245,6 +315,7 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
             }, 30000) // 30 секунд до удаления сообщения
         }
     } else {
+        logger.info("User " + user + " is trying to use /build, but bot is not admin")
         await bot.sendMessage(msg.chat.id, "Ничего я не создам, пока я не админ")
     }
 
@@ -256,6 +327,8 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
 bot.onText(/\/setweek_(.+)/, async (msg, arr: any) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -272,6 +345,7 @@ bot.onText(/\/setweek_(.+)/, async (msg, arr: any) => {
         if (admin) {
             try {
                 const group = await Group.findOne({chatId: msg.chat.id})
+                logger.info("User " + user + " is using /setweek to change week in group " + group.groupName)
                 const holidays = group.holidays
                 const holidayWeeksNumbers = []
                 for (let i = 0; i < holidays.length; i++) {
@@ -297,9 +371,11 @@ bot.onText(/\/setweek_(.+)/, async (msg, arr: any) => {
 
 
             } catch (err) {
+                logger.fatal("Something crashed in /setweek command, last user was " + user)
                 await bot.sendMessage(msg.chat.id, "Неверный ввод")
             }
         } else {
+            logger.info("User " + user + " is trying to use /setweek, but user is not admin")
             const funnyResponse = `
 <b>Править данные</b>
 <b>Сёгунату дано лишь</b>
@@ -314,6 +390,7 @@ bot.onText(/\/setweek_(.+)/, async (msg, arr: any) => {
             }, 30000) // 30 секунд до удаления сообщения
         }
     } else {
+        logger.info("User " + user + " is trying to use /setweek, but bot is not admin")
         await bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")
     }
 })
@@ -326,6 +403,8 @@ bot.onText(/\/setweek_(.+)/, async (msg, arr: any) => {
 bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -344,6 +423,7 @@ bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
                 const group = await Group.findOne({chatId: msg.chat.id})
                 group.groupAdmin = arr[1]
                 await group.save()
+                logger.info("User " + user + " is using /setadmin to change admin in group " + group.groupName)
                 const send = await bot.sendMessage(msg.chat.id, `Админ этой группы ${arr[1]}, сообщение удалится через 10 секунд`)
 
                 setTimeout(() => {
@@ -352,9 +432,11 @@ bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
                 }, 10000)
 
             } catch (err) {
+                logger.fatal("Something crashed in /setadmin command, last user was " + user)
                 await bot.sendMessage(msg.chat.id, "Неверный ввод")
             }
         } else {
+            logger.info("User " + user + " is trying to use /setadmin, but user is not admin")
             const funnyResponse = `
 <b>Админа менять</b>
 <b>Нельзя группы текущей </b>
@@ -369,6 +451,7 @@ bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
             }, 30000) // 30 секунд до удаления сообщения
         }
     } else {
+        logger.info("User " + user + " is trying to use /setadmin, but bot is not admin")
         await bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")
     }
 })
@@ -379,6 +462,9 @@ bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
 bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
+    console.log("USER**************** ", user)
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -396,6 +482,7 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
             }
             if (admin) {
                 try {
+                    logger.info("User " + user + " is successfully using /givemetheinstructionsplease to see instructions")
                     const text: string = `
                      <strong>----------------------------------------------------------------</strong>
         
@@ -446,9 +533,11 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
                         parse_mode: "HTML"
                     })
                 } catch (err) {
+                    logger.fatal("Something crashed in /givemetheinstructionsplease command, last user was " + user)
                     await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
                 }
             } else {
+                logger.info("User " + user + " is trying to use /givemetheinstructionsplease, but user is not admin")
                 const funnyResponse = `
 <b>Узреть желаешь</b>
 <b>Инструкцию программы</b>
@@ -466,6 +555,7 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
             await bot.sendMessage(msg.chat.id, "Лишь в групповом чате отвечаю я на данную команду")
         }
     } else {
+        logger.info("User " + user + " is trying to use /givemetheinstructionsplease, but bot is not admin")
         await bot.sendMessage(msg.chat.id, "Ничего я не покажу, пока я не админ")
     }
 })
@@ -477,6 +567,8 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
 bot.onText(/\/show/, async (msg) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -485,6 +577,7 @@ bot.onText(/\/show/, async (msg) => {
     if (isBotAdmin) {
     try {
         const group = await Group.findOne({chatId: msg.chat.id})
+        logger.info("User " + user + " is using /show, to see info about group " + group.groupName)
         const thisWeekSaturday = moment().endOf('week')
         let diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4))
         for (let i = 0; i < group.holidayWeeksNumbers.length; i++) {
@@ -540,9 +633,11 @@ bot.onText(/\/show/, async (msg) => {
             bot.deleteMessage(msg.chat.id, send.message_id.toString())
         }, 30000) // 30 секунд до удаления сообщения
     } catch(err) {
+        logger.info("User " + user + " is trying to use /show, but group doesn't exist")
         await bot.sendMessage(msg.chat.id, "Группа еще не создана")
     }
     } else{
+            logger.info("User " + user + " is trying to use /show, but bot is not admin")
             await bot.sendMessage(msg.chat.id, "Хочу быть админом, иначе ничего не покажу")
     }
 })
@@ -553,9 +648,12 @@ bot.onText(/\/show/, async (msg) => {
  * Подсказки данной команды нет, нужно вводить самому без ошибок, иначе не сработает
  */
 bot.onText(/\/allgroups/, async (msg) => {
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     const isPrivate = msg.chat.type === "private"
     if (isPrivate) {
         try {
+            logger.info("User " + user + " is watching /allgroups")
             const groups = await Group.find()
             for (let i = 0; i < groups.length; i++) {
                 const group = groups[i]
@@ -620,9 +718,11 @@ bot.onText(/\/allgroups/, async (msg) => {
                 })
             }
         } catch(err) {
+            logger.fatal("User " + user + " tried /allgroups and bot crashed")
             await bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")
         }
     } else {
+        logger.info("User " + user + " wrote /allgroups in group chat")
         await bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично пожалуйста, я не могу когда все смотрят")
     }
 })
@@ -635,6 +735,9 @@ bot.onText(/\/allgroups/, async (msg) => {
  * Пароль пока не придумал где хранить, пусть это будет coolPasha
  */
 bot.onText(/\/delete_(.+)/, async (msg, arr: any) => {
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
+
     const funnyResponse = `
 <b>Группу удалить</b>
 <b>Оставить пустоту нам</b>
@@ -643,15 +746,19 @@ bot.onText(/\/delete_(.+)/, async (msg, arr: any) => {
         try {
             const ii = arr[1].replace(/\s+/g,' ').trim().split(" ")
             const group = await Group.findOne({_id: ii[0]})
+
             if (ii[1] === "coolPasha") {
+                logger.warn("User " + user + " delete group " + group.groupName)
                 await group.delete()
                 await bot.sendMessage(msg.chat.id, `Группа ${group.groupName} успешно удалена из базы`)
             } else {
+                logger.warn("User " + user + " is trying to delete group " + group.groupName + " but password is incorrect")
                 await bot.sendMessage(msg.chat.id, funnyResponse, {
                     parse_mode: "HTML"
                 })
             }
         } catch (err) {
+            logger.fatal("User " + user + " used command /delete and bot crashed because not all parameters of command were present")
             await bot.sendMessage(msg.chat.id, funnyResponse, {
                 parse_mode: "HTML"
             })
@@ -669,6 +776,8 @@ bot.onText(/\/delete_(.+)/, async (msg, arr: any) => {
 bot.onText(/\/letsplay/, async (msg) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin =  true
@@ -676,6 +785,7 @@ bot.onText(/\/letsplay/, async (msg) => {
     });
     if (isBotAdmin) {
         try {
+            logger.silly("User " + user + " started cipher game by command /letsplay")
             const text = `
             <b>Как команду напиши мне что ты слышишь в этом файле (если звука нет, то скачайте файл и запустите через проигрыватель)</b>
         `
@@ -688,9 +798,11 @@ bot.onText(/\/letsplay/, async (msg) => {
                 bot.deleteMessage(msg.chat.id, send.message_id.toString())
             }, 120000)
         } catch (err) {
+            logger.fatal("User " + user + " crashed bot with /letsplay command")
             await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
         }
     } else {
+        logger.info("User " + user + " tries to play /letsplay but bot is not admin")
         await bot.sendMessage(msg.chat.id, "Я бы с радостью показал и затем удалил квестовое сообщение, но я лишь обычный юзер, а не админ((((")
     }
 })
@@ -702,6 +814,8 @@ bot.onText(/\/letsplay/, async (msg) => {
 bot.onText(/\/gotonext/, async (msg) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -710,19 +824,23 @@ bot.onText(/\/gotonext/, async (msg) => {
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
+                logger.silly("User " + user + " wrote /gotonext in private chat as it should be")
                 await bot.sendMessage(msg.chat.id, "dypal uvd wslhzl av tl aol jvtthuk zalwaoyll")
             } else {
                 if (isBotAdmin) {
+                    logger.silly("User " + user + " wrote /gotonext in group chat")
                     const send = await bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично, я не могу при всех")
                     await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
                     await setTimeout(() => {
                         bot.deleteMessage(msg.chat.id, send.message_id.toString())
                     }, 7000)
                 } else {
+                    logger.silly("User " + user + " wrote /gotonext when bot is not admin, its cheating")
                     await bot.sendMessage(msg.chat.id, "Как вы узнали эту команду при том, что я не админ?? Вы читер?")
                 }
             }
         } catch (err) {
+            logger.fatal("User " + user + " crashed bot with /gotonext command")
             await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
         }
 })
@@ -734,6 +852,8 @@ bot.onText(/\/gotonext/, async (msg) => {
 bot.onText(/\/stepthree/, async (msg) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -742,19 +862,23 @@ bot.onText(/\/stepthree/, async (msg) => {
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
+                logger.silly("User " + user + " wrote /stepthree in private chat as it should be")
                 await bot.sendMessage(msg.chat.id, "yhynen oemotd urywhw aifwee rgrrcb ehiios otetmi nwnemt tadmae")
             } else {
                 if (isBotAdmin) {
+                    logger.silly("User " + user + " wrote /stepthree in group chat")
                     const send = await bot.sendMessage(msg.chat.id, "Если второй шаг был в личной переписке, почему третий должен быть в общем чате?")
                     await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
                     await setTimeout(() => {
                         bot.deleteMessage(msg.chat.id, send.message_id.toString())
                     }, 7000)
                 } else {
+                    logger.silly("User " + user + " wrote /stepthree when bot is not admin, its cheating")
                     await bot.sendMessage(msg.chat.id, "Похоже да, вы читер, фуууу")
                 }
             }
         } catch (err) {
+            logger.fatal("User " + user + " crashed bot with /stepthree command")
             await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
 
         }
@@ -773,6 +897,8 @@ bot.onText(/\/stepthree/, async (msg) => {
 bot.onText(/\/website/, async (msg) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -781,19 +907,23 @@ bot.onText(/\/website/, async (msg) => {
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
+                logger.silly("User " + user + " wrote /website in private chat as it should be")
                 await bot.sendMessage(msg.chat.id, "https://starman-cook.github.io/cipher/html.html")
             } else {
                 if (isBotAdmin) {
+                    logger.silly("User " + user + " wrote /website in group chat")
                     const send = await bot.sendMessage(msg.chat.id, "Вы издеваетесь))?")
                     await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
                     await setTimeout(() => {
                         bot.deleteMessage(msg.chat.id, send.message_id.toString())
                     }, 7000)
                 }   else {
+                    logger.silly("User " + user + " wrote /website when bot is not admin, its cheating")
                     await bot.sendMessage(msg.chat.id, "Я читеру бы написал 'Вы издеваетесь?', но я не админ, поэтому пишу всякую фигню... ")
                 }
             }
         } catch (err) {
+            logger.fatal("User " + user + " crashed bot with /website command")
             await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
 
         }
@@ -811,6 +941,8 @@ bot.onText(/\/website/, async (msg) => {
 bot.onText(/\/243256/, async (msg) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -819,6 +951,7 @@ bot.onText(/\/243256/, async (msg) => {
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
+                logger.silly("User " + user + " wrote /243256 in private chat and got a file with hidden cipher")
                 const text: string = `
             <b>Не нужно ничего искать, нужно лишь скачать и что-то поменять</b>
             `
@@ -828,16 +961,19 @@ bot.onText(/\/243256/, async (msg) => {
                 })
             } else {
                 if (isBotAdmin) {
+                    logger.silly("User " + user + " wrote /243256 in group chat")
                     const send = await bot.sendMessage(msg.chat.id, "Вы далеко зашли, и вами движет любопытство, что же ответит бот в общем чате на этот раз. А отвечу я 'notredame'")
                     await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
                     await setTimeout(() => {
                         bot.deleteMessage(msg.chat.id, send.message_id.toString())
                     }, 7000)
                 } else {
+                    logger.silly("User " + user + " wrote /243256 when bot is not admin, its cheating")
                     await bot.sendMessage(msg.chat.id, "Будь я админом, я дал бы вам крайне важную подсказку по квесту, а так фиг вам))")
                 }
             }
         } catch (err) {
+            logger.fatal("User " + user + " crashed bot with /243256 command")
             await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
 
         }
@@ -850,6 +986,8 @@ bot.onText(/\/243256/, async (msg) => {
 bot.onText(/\/iamthechampion/, async (msg) => {
     let isBotAdmin: boolean = false;
     const botId: any = await bot.getMe()
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -858,6 +996,7 @@ bot.onText(/\/iamthechampion/, async (msg) => {
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
+                logger.silly("User " + user + " wrote /iamthechampion in private chat, we have a winner")
                 const text: string = `
                                     <b>&#9812; Вы победили!!!&#127881;&#127881;&#127881;</b>
     <b>&#9812; Отличная работа ${msg.chat.first_name}&#127881;&#127881;&#127881;</b>
@@ -871,6 +1010,7 @@ bot.onText(/\/iamthechampion/, async (msg) => {
                 })
             } else {
                 if (isBotAdmin) {
+                    logger.silly("User " + user + " wrote /iamthechampion in group chat, we have a winner")
                     const textWinnerToGroup = `
     <b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>
                     <b>&#9812; Смотрите все, ${msg.from!.first_name} решил головоломку! &#9812;</b>
@@ -881,10 +1021,12 @@ bot.onText(/\/iamthechampion/, async (msg) => {
                     })
                     await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
                 }  else {
+                    logger.silly("User " + user + " wrote /iamthechampion when bot is not admin, its cheating")
                     await bot.sendMessage(msg.chat.id, "Я бы сказал кто здесь победитель, со смайликами всякими, но я не админ... и как вы дошли до этой команды без бота админа? Удалите команду, чтобы не спойлерить решение")
                 }
             }
         } catch (err) {
+            logger.fatal("User " + user + " crashed bot with /iamthechampion command")
             await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
 
         }
@@ -897,14 +1039,17 @@ bot.onText(/\/iamthechampion/, async (msg) => {
  */
 
 const buildLessonMessage = async (groups: Array<GroupInterface>, day: any) => {
+    logger.trace("LESSON: Start of Building Lesson Message function")
     for (let i = 0; i < groups.length; i++) {
         for (let j = 0; j < groups[i].lessons.length; j++) {
+            logger.trace("LESSON: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
             const isExamToday = day === 6 && (groups[i].currentWeek + 1) % 4 === 0
             if (isExamToday) continue
             // @ts-ignore
             const checkKeyAndGetTime = groups[i].lessons[j][day]
             if (checkKeyAndGetTime && groups[i].isActive) {
                 const lessonNum = (groups[i].currentWeek) * groups[i].lessons.length + j + 1
+                logger.trace("LESSON: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about lesson today, lesson number is " + lessonNum)
                 await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, сегодня (${moment().format("DD-MM-YYYY")}) у вас состоится занятие номер #${lessonNum} в ${checkKeyAndGetTime}, читайте раздатку перед занятием`, {
                     parse_mode: "HTML"
                 })
@@ -914,13 +1059,16 @@ const buildLessonMessage = async (groups: Array<GroupInterface>, day: any) => {
 }
 
 const buildWebinarMessage = async (groups: Array<GroupInterface>, day: any) => {
+    logger.trace("WEBINAR: Start of Building Webinar Message function")
     for (let i = 0; i < groups.length; i++) {
         for (let j = 0; j < groups[i].webinars.length; j++) {
+            logger.trace("WEBINAR: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
             const isExamToday = day === 6 && (groups[i].currentWeek + 1) % 4 === 0
             if (isExamToday) continue
             // @ts-ignore
             const checkKeyAndGetTime = groups[i].webinars[j][day]
             if (checkKeyAndGetTime && groups[i].isActive) {
+                logger.trace("WEBINAR: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about webinar today")
                 await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, сегодня (${moment().format("DD-MM-YYYY")}) у вас состоится вебинар в ${checkKeyAndGetTime}, пишите вопросы с хэштэгом #Навебинар`, {
                     parse_mode: "HTML"
                 })
@@ -933,8 +1081,11 @@ const buildWebinarMessage = async (groups: Array<GroupInterface>, day: any) => {
  * Составление сообщения о наступающей контрольной
  */
 const buildComingExamMessage = async (groups: Array<GroupInterface>, date: string) => {
+    logger.trace("EXAM: Start of Building Upcoming Exam Message function")
     for (let i = 0; i < groups.length; i++) {
+        logger.trace("EXAM: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
         if ((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive) {
+            logger.trace("EXAM: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about upcoming exam number " + (groups[i].currentWeek + 1) / 4)
             await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, в эту субботу (${date}) у вас состоится контрольная работа номер #${(groups[i].currentWeek + 1) / 4} c 11:00 до 19:00, повторите все пройденные темы этого месяца`, {
                 parse_mode: "HTML"
             })
@@ -946,8 +1097,11 @@ const buildComingExamMessage = async (groups: Array<GroupInterface>, date: strin
  * Составление сообщения о контрольной сегодня
  */
 const buildTodayExamMessage = async (groups: Array<GroupInterface>) => {
+    logger.trace("EXAM_TODAY: Start of Building Exam Message function")
     for (let i = 0; i < groups.length; i++) {
+        logger.trace("EXAM_TODAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
         if ((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive) {
+            logger.trace("EXAM_TODAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about today's exam number " + (groups[i].currentWeek + 1) / 4)
             await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, сегодня (${moment().format("DD-MM-YYYY")}) у вас состоится контрольная работа номер #${(groups[i].currentWeek + 1) / 4} c 11:00 до 19:00, подготовьте треккеры если пишите онлайн, подготовьте все необходимые по вашему мнению инструменты`, {
                 parse_mode: "HTML"
             })
@@ -959,8 +1113,11 @@ const buildTodayExamMessage = async (groups: Array<GroupInterface>) => {
  * Составление сообщения о предстоящей оплате
  */
 const buildPaySoonMessage = async (groups: Array<GroupInterface>, date: string) => {
+    logger.trace("PAY: Start of Building Upcoming Pay Message function")
     for (let i = 0; i < groups.length; i++) {
+        logger.trace("PAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
         if ((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3) {
+            logger.trace("PAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about upcoming payment")
             await bot.sendMessage(groups[i].chatId, `Всем привет, напоминаем об оплате за текущий месяц, дедлайн до пятницы (${date})`, {
                 parse_mode: "HTML"
             })
@@ -972,9 +1129,12 @@ const buildPaySoonMessage = async (groups: Array<GroupInterface>, date: string) 
  * Составление сообщения об оплате сегодня
  */
 const buildPayTodayMessage = async (groups: Array<GroupInterface>) => {
+    logger.trace("PAY_TODAY: Start of Building Pay Today Message function")
     const months = ["noFirstMonth", "второй", "третий","четвертый","пятый","шестой","седьмой","восьмой","девятый","десятый","одиннадцатый","двенадцатый","тринадцатый","четырнадцатый","пятнадцатый"]
     for (let i = 0; i < groups.length; i++) {
+        logger.trace("PAY_TODAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
         if ((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3) {
+            logger.trace("PAY_TODAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about today's payment")
             await bot.sendMessage(groups[i].chatId, `Всем привет, #напоминаем об оплате за ${months[(groups[i].currentWeek) / 4]} учебный месяц. Сегодня - ${moment().format("DD-MM-YYYY")}, крайний день внесения  оплаты.`, {
                 parse_mode: "HTML"
             })
@@ -986,7 +1146,9 @@ const buildPayTodayMessage = async (groups: Array<GroupInterface>) => {
  * Прибавление недели, обычшый счетчик, срабаьывает раз в неделю, скорее всего в понедельник  самом начале дня ночью.
  */
 const incrementWeek = async (groups: Array<GroupInterface>) => {
+    logger.trace("INCR_WEEK: Start of Increment Week Number function")
     for (let i = 0; i < groups.length; i++) {
+        logger.trace("INCR_WEEK: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
         groups[i].currentWeek++
         // @ts-ignore
         groups[i].save()
@@ -997,8 +1159,11 @@ const incrementWeek = async (groups: Array<GroupInterface>) => {
  * Проверка на каникулы, переключает isActive группы на false либо наоборот обратно на true
  */
 const isHoliday = async (group: GroupInterface) => {
+    logger.trace("IS_HOLIDAY: Start of Holiday Check function")
     for (let i = 0; i < group.holidayWeeksNumbers.length; i++) {
+        logger.trace("IS_HOLIDAY: Groups in cycle, group  " + group.groupName)
         if (group.holidayWeeksNumbers[i] === (group.currentWeek + 1)) {
+            logger.trace("IS_HOLIDAY: Groups " + group.groupName + " has holiday")
             group.holidayWeeksNumbers.splice(i, 1)
             group.isActive = false
             group.currentWeek -= 1
@@ -1007,6 +1172,7 @@ const isHoliday = async (group: GroupInterface) => {
             return
         }
     }
+    logger.trace("IS_HOLIDAY: Groups " + group.groupName + " does not have holiday")
     group.isActive = true
     // @ts-ignore
     group.save()
@@ -1015,6 +1181,7 @@ const isHoliday = async (group: GroupInterface) => {
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TODO пока логи на сообшения от админимстрации не добавлены, так как они могут часто меняться и по большому счеу на работу бота не влияют
 
 /**
  * Функция для информирования о посещении школы
@@ -1251,3 +1418,15 @@ function buildMomentDate(date: string) {
     const dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0])
     return moment(dt)
 }
+
+
+app.get("/logs/:date",  (req, res) => {
+    try {
+        const date = req.params.date
+        const logs = fs.readFileSync(path.join(__dirname, `/logs/${date}/logs.txt`), 'utf8')
+        const arr = logs.split("\n")
+        res.send(arr)
+    } catch (e) {
+        res.status(404).send({message: "Nothing was found"})
+    }
+})
