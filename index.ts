@@ -423,7 +423,7 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
         <b>PS:</b>
         
         <pre>Вы также можете редактировать номер текущей недели, с помощью команды /setweek_.</pre>
-        <pre>Например, /setweek_3 мы меняем текущую неделю на 3 (считать неделю просто, разделите номер занятия текущего на количество занятий в неделе, например занятие 22 при двух занятиях в неделю, это 11 неделя обучения)))</pre>
+        <pre>Например, /setweek_3 мы меняем текущую неделю на 3 (считать неделю просто, разделите номер первого занятия этой недели на количество занятий в неделе, например занятие 21 при двух занятиях в неделю, это 10 неделя обучения (округлять вниз если что))))</pre>
         
         <b>PPS:</b>
         
@@ -486,9 +486,9 @@ bot.onText(/\/show/, async (msg) => {
     try {
         const group = await Group.findOne({chatId: msg.chat.id})
         const thisWeekSaturday = moment().endOf('week')
-        let diff = 4 - ((group.currentWeek + 1) % 4)
+        let diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4))
         for (let i = 0; i < group.holidayWeeksNumbers.length; i++) {
-            if (group.holidayWeeksNumbers[i] - (group.currentWeek + 1) <= 4 || !group.isActive) {
+            if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
                 diff += 1
             }
         }
@@ -560,9 +560,9 @@ bot.onText(/\/allgroups/, async (msg) => {
             for (let i = 0; i < groups.length; i++) {
                 const group = groups[i]
                 const thisWeekSaturday = moment().endOf('week')
-                let diff = 4 - ((group.currentWeek + 1) % 4)
+                let diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4))
                 for (let j = 0; j < group.holidayWeeksNumbers.length; j++) {
-                    if (group.holidayWeeksNumbers[j] - (group.currentWeek + 1) <= 4 || !group.isActive) {
+                    if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
                         diff += 1
                     }
                 }
