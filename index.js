@@ -198,12 +198,15 @@ node_schedule_1.default.scheduleJob("1 0 13 * * 1", function () { return __await
                 return [4 /*yield*/, buildCheatingIsBadMessage(groups)];
             case 9:
                 _a.sent();
+                return [4 /*yield*/, buildVacationSoonMessage(groups)];
+            case 10:
+                _a.sent();
                 logger.info("Monday 13:00 end");
                 return [2 /*return*/];
         }
     });
 }); });
-// Здесь идет прибаление недель, в самом начале понедельника, в 00:00 00минут 01 секунд и проверка на каникулы, если каникулы, то группа деактивируется и все
+// Здесь идет прибавление недель, в самом начале понедельника, в 00:00 00минут 01 секунд и проверка на каникулы, если каникулы, то группа деактивируется и все
 node_schedule_1.default.scheduleJob("1 0 0 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
     var groups, i;
     return __generator(this, function (_a) {
@@ -245,7 +248,7 @@ node_schedule_1.default.scheduleJob("1 0 13 * * 2", function () { return __await
                 return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
                 groups = _a.sent();
-                dateOnFriday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
+                dateOnFriday = moment_1.default().add(3, "days").format("DD-MM-YYYY");
                 dateOfNextSaturday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
                 return [4 /*yield*/, buildLessonMessage(groups, 2)];
             case 2:
@@ -279,7 +282,7 @@ node_schedule_1.default.scheduleJob("1 0 13 * * 3", function () { return __await
                 return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
                 groups = _a.sent();
-                dateOnFriday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
+                dateOnFriday = moment_1.default().add(2, "days").format("DD-MM-YYYY");
                 dateOfNextSaturday = moment_1.default().add(3, "days").format("DD-MM-YYYY");
                 return [4 /*yield*/, buildLessonMessage(groups, 3)];
             case 2:
@@ -310,7 +313,7 @@ node_schedule_1.default.scheduleJob("1 0 13 * * 4", function () { return __await
                 return [4 /*yield*/, group_model_1.Group.find()];
             case 1:
                 groups = _a.sent();
-                dateOnFriday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
+                dateOnFriday = moment_1.default().add(1, "days").format("DD-MM-YYYY");
                 dateOfNextSaturday = moment_1.default().add(2, "days").format("DD-MM-YYYY");
                 return [4 /*yield*/, buildLessonMessage(groups, 4)];
             case 2:
@@ -1670,14 +1673,26 @@ var buildPayTodayMessage = function (groups) { return __awaiter(void 0, void 0, 
 var incrementWeek = function (groups) { return __awaiter(void 0, void 0, void 0, function () {
     var i;
     return __generator(this, function (_a) {
-        logger.trace("INCR_WEEK: Start of Increment Week Number function");
-        for (i = 0; i < groups.length; i++) {
-            logger.trace("INCR_WEEK: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
-            groups[i].currentWeek++;
-            // @ts-ignore
-            groups[i].save();
+        switch (_a.label) {
+            case 0:
+                logger.trace("INCR_WEEK: Start of Increment Week Number function");
+                i = 0;
+                _a.label = 1;
+            case 1:
+                if (!(i < groups.length)) return [3 /*break*/, 4];
+                logger.trace("INCR_WEEK: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
+                groups[i].currentWeek++;
+                // @ts-ignore
+                return [4 /*yield*/, groups[i].save()];
+            case 2:
+                // @ts-ignore
+                _a.sent();
+                _a.label = 3;
+            case 3:
+                i++;
+                return [3 /*break*/, 1];
+            case 4: return [2 /*return*/];
         }
-        return [2 /*return*/];
     });
 }); };
 /**
@@ -1686,24 +1701,38 @@ var incrementWeek = function (groups) { return __awaiter(void 0, void 0, void 0,
 var isHoliday = function (group) { return __awaiter(void 0, void 0, void 0, function () {
     var i;
     return __generator(this, function (_a) {
-        logger.trace("IS_HOLIDAY: Start of Holiday Check function");
-        for (i = 0; i < group.holidayWeeksNumbers.length; i++) {
-            logger.trace("IS_HOLIDAY: Groups in cycle, group  " + group.groupName);
-            if (group.holidayWeeksNumbers[i] === (group.currentWeek + 1)) {
+        switch (_a.label) {
+            case 0:
+                logger.trace("IS_HOLIDAY: Start of Holiday Check function");
+                i = 0;
+                _a.label = 1;
+            case 1:
+                if (!(i < group.holidayWeeksNumbers.length)) return [3 /*break*/, 4];
+                logger.trace("IS_HOLIDAY: Groups in cycle, group  " + group.groupName);
+                if (!(group.holidayWeeksNumbers[i] === (group.currentWeek + 1))) return [3 /*break*/, 3];
                 logger.trace("IS_HOLIDAY: Groups " + group.groupName + " has holiday");
                 group.holidayWeeksNumbers.splice(i, 1);
                 group.isActive = false;
                 group.currentWeek -= 1;
                 // @ts-ignore
-                group.save();
+                return [4 /*yield*/, group.save()];
+            case 2:
+                // @ts-ignore
+                _a.sent();
                 return [2 /*return*/];
-            }
+            case 3:
+                i++;
+                return [3 /*break*/, 1];
+            case 4:
+                logger.trace("IS_HOLIDAY: Groups " + group.groupName + " does not have holiday");
+                group.isActive = true;
+                // @ts-ignore
+                return [4 /*yield*/, group.save()];
+            case 5:
+                // @ts-ignore
+                _a.sent();
+                return [2 /*return*/];
         }
-        logger.trace("IS_HOLIDAY: Groups " + group.groupName + " does not have holiday");
-        group.isActive = true;
-        // @ts-ignore
-        group.save();
-        return [2 /*return*/];
     });
 }); };
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1868,7 +1897,7 @@ function buildWishGoodLuckMessageForFirstExam(groups) {
                 case 1:
                     if (!(i < groups.length)) return [3 /*break*/, 4];
                     if (!(groups[i].currentWeek === 3 && groups[i].isActive)) return [3 /*break*/, 3];
-                    text = "\n<b>\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!</b>\n\u0425\u043E\u0442\u0438\u043C \u043F\u043E\u0436\u0435\u043B\u0430\u0442\u044C \u0432\u0430\u043C \u0443\u0441\u043F\u0435\u0445\u0430 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430\u0448\u043D\u0435\u0439 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u043E\u0439! \u0412\u044B \u0441\u043F\u0440\u0430\u0432\u0438\u0442\u0435\u0441\u044C!\n\n\u041E\u0431\u0440\u0430\u0449\u0430\u0435\u043C \u0432\u0430\u0448\u0435 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u043D\u0430 \u0442\u043E, \u0447\u0442\u043E \u043D\u0430 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0443\u044E \u0443 \u0432\u0430\u0441 \u0432\u044B\u0434\u0435\u043B\u044F\u0435\u0442\u0441\u044F \u0441\u0442\u0440\u043E\u0433\u043E \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u043D\u043E\u0435 \u0432\u0440\u0435\u043C\u044F \u0441 11-00 \u0434\u043E 19-00, \u0442\u043E \u0435\u0441\u0442\u044C 8 \u0447\u0430\u0441\u043E\u0432. \n\u0412 19-00 \u0432\u044B \u0434\u043E\u043B\u0436\u043D\u044B \u0441\u0434\u0430\u0442\u044C \u0432\u0430\u0448\u0443 \u0440\u0430\u0431\u043E\u0442\u0443, \u0432\u043D\u0435 \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E\u0441\u0442\u0438 \u043E\u0442 \u0442\u043E\u0433\u043E, \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0438 \u0432\u044B \u043F\u0440\u043E\u0435\u043A\u0442 \u0438\u043B\u0438 \u043D\u0435\u0442. \u0420\u0430\u0431\u043E\u0442\u044B \u0441\u0434\u0430\u043D\u043D\u044B\u0435 \u043F\u043E\u0441\u043B\u0435 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0430 \u0431\u0443\u0434\u0443\u0442 \u0448\u0442\u0440\u0430\u0444\u043E\u0432\u0430\u0442\u044C\u0441\u044F \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u043C \u0441\u043D\u0438\u0436\u0435\u043D\u0438\u0435\u043C \u0431\u0430\u043B\u043B\u043E\u0432.\n\n            ";
+                    text = "\n<b>\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!</b>\n\u0425\u043E\u0442\u0438\u043C \u043F\u043E\u0436\u0435\u043B\u0430\u0442\u044C \u0432\u0430\u043C \u0443\u0441\u043F\u0435\u0445\u0430 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430\u0448\u043D\u0435\u0439 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u043E\u0439! \u0412\u044B \u0441\u043F\u0440\u0430\u0432\u0438\u0442\u0435\u0441\u044C!\n\n\u041E\u0431\u0440\u0430\u0449\u0430\u0435\u043C \u0432\u0430\u0448\u0435 \u0432\u043D\u0438\u043C\u0430\u043D\u0438\u0435 \u043D\u0430 \u0442\u043E, \u0447\u0442\u043E \u043D\u0430 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0443\u044E \u0443 \u0432\u0430\u0441 \u0432\u044B\u0434\u0435\u043B\u044F\u0435\u0442\u0441\u044F \u0441\u0442\u0440\u043E\u0433\u043E \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u043D\u043E\u0435 \u0432\u0440\u0435\u043C\u044F \u0441 11-00 \u0434\u043E 19-00, \u0442\u043E \u0435\u0441\u0442\u044C 8 \u0447\u0430\u0441\u043E\u0432. \n\u0412 19-00 \u0432\u044B \u0434\u043E\u043B\u0436\u043D\u044B \u0441\u0434\u0430\u0442\u044C \u0432\u0430\u0448\u0443 \u0440\u0430\u0431\u043E\u0442\u0443, \u0432\u043D\u0435 \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E\u0441\u0442\u0438 \u043E\u0442 \u0442\u043E\u0433\u043E, \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0438 \u0432\u044B \u043F\u0440\u043E\u0435\u043A\u0442 \u0438\u043B\u0438 \u043D\u0435\u0442. \u0420\u0430\u0431\u043E\u0442\u044B \u0441\u0434\u0430\u043D\u043D\u044B\u0435 \u043F\u043E\u0441\u043B\u0435 \u0434\u0435\u0434\u043B\u0430\u0439\u043D\u0430 \u0431\u0443\u0434\u0443\u0442 \u0448\u0442\u0440\u0430\u0444\u043E\u0432\u0430\u0442\u044C\u0441\u044F \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u043C \u0441\u043D\u0438\u0436\u0435\u043D\u0438\u0435\u043C \u0431\u0430\u043B\u043B\u043E\u0432.\n\n\u041D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0447\u0442\u043E \u0432 \u043E\u0444\u0438\u0441\u0435 \u0438\u043C\u0435\u0435\u0442\u0441\u044F \u0445\u043E\u043B\u043E\u0434\u0438\u043B\u044C\u043D\u0438\u043A \u0438 \u043C\u0438\u043A\u0440\u043E\u0432\u043E\u043B\u043D\u043E\u0432\u043A\u0430, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u0432\u0437\u044F\u0442\u044C \u0441\u0441\u043E\u0431\u043E\u0439 \u0435\u0434\u0443, \u043D\u0430\u043F\u0438\u0442\u043A\u0438 \u0434\u043B\u044F \u043E\u0431\u0435\u0434\u0430. \u0427\u0430\u0439, \u043A\u043E\u0444\u0435, \u0432\u043E\u0434\u0430, \u043F\u0435\u0447\u0435\u043D\u044C\u043A\u0438, \u043F\u0440\u0438\u0431\u043E\u0440\u044B \u0443 \u043D\u0430\u0441 \u0438\u043C\u0435\u044E\u0442\u0441\u044F\uD83D\uDE0B\n            ";
                     return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
@@ -1937,6 +1966,47 @@ function buildCheatingIsBadMessage(groups) {
                     i++;
                     return [3 /*break*/, 1];
                 case 4: return [2 /*return*/];
+            }
+        });
+    });
+}
+/**
+ * Функция для информирования о наступаюзих через неделю каникулах
+ */
+function buildVacationSoonMessage(groups) {
+    return __awaiter(this, void 0, void 0, function () {
+        var i, j, months, holiday, parts, day, month, text;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    i = 0;
+                    _a.label = 1;
+                case 1:
+                    if (!(i < groups.length)) return [3 /*break*/, 6];
+                    j = 0;
+                    _a.label = 2;
+                case 2:
+                    if (!(j < groups[i].holidayWeeksNumbers.length)) return [3 /*break*/, 5];
+                    if (!(groups[i].holidayWeeksNumbers[j] - 1 === (groups[i].currentWeek + 1))) return [3 /*break*/, 4];
+                    months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+                    holiday = moment_1.default().add(1, "weeks").format("DD-MM-YYYY");
+                    parts = holiday.split("-");
+                    day = parseInt(parts[0]);
+                    month = months[parseInt(parts[1]) - 1];
+                    text = "\n                #\u0412\u0430\u0436\u043D\u0430\u044F\u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044F \n\n\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!\n\u0421 " + day + " " + month + " \u043F\u043E " + (day + 6) + " " + month + ", \u0443 \u0432\u0430\u0441 \u0431\u0443\u0434\u0435\u0442 \u043D\u0435\u0434\u0435\u043B\u044F \u043A\u0430\u043D\u0438\u043A\u0443\u043B \uD83C\uDF89\n\u0425\u043E\u0440\u043E\u0448\u0435\u043D\u044C\u043A\u043E \u043E\u0442\u0434\u043E\u0445\u043D\u0438\u0442\u0435 \u0437\u0430 \u044D\u0442\u0443 \u043D\u0435\u0434\u0435\u043B\u044E \u0438 \u043D\u0430\u0431\u0435\u0440\u0438\u0442\u0435\u0441\u044C \u0441\u0438\u043B \uD83D\uDE0E\uD83D\uDE34\uD83E\uDDD8\n\n\u0412\u0441\u0435 \u0432\u0430\u0448\u0438 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0438 \u0443\u0445\u043E\u0434\u044F\u0442 \u0432 \u043E\u0442\u043F\u0443\u0441\u043A. \u0421\u0430\u043F\u043F\u043E\u0440\u0442 \u0438 \u043B\u0435\u043A\u0446\u0438\u0438 \u0432 \u044D\u0442\u0443 \u043D\u0435\u0434\u0435\u043B\u044E \u043F\u0440\u043E\u0432\u043E\u0434\u0438\u0442\u044C\u0441\u044F \u043D\u0435 \u0431\u0443\u0434\u0443\u0442. \u041D\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0432 \u0447\u0430\u0442\u0435 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0438 \u043E\u0442\u0432\u0435\u0447\u0430\u0442\u044C \u043D\u0435 \u0431\u0443\u0434\u0443\u0442 (\u043D\u043E \u043C\u043E\u0433\u0443\u0442, \u043F\u043E \u043B\u0438\u0447\u043D\u043E\u0439 \u0438\u043D\u0438\u0446\u0438\u0430\u0442\u0438\u0432\u0435), \u0442\u0430\u043A \u0447\u0442\u043E \u0435\u0441\u043B\u0438 \u0432\u044B \u0437\u043D\u0430\u0435\u0442\u0435 \u043E\u0442\u0432\u0435\u0442 \u043D\u0430 \u0437\u0430\u0434\u0430\u043D\u043D\u044B\u0439 \u043E\u0434\u043D\u043E\u0433\u0440\u0443\u043F\u043F\u043D\u0438\u043A\u043E\u043C \u0432\u043E\u043F\u0440\u043E\u0441, \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u043E \u043E\u0442\u0432\u0435\u0447\u0430\u0439\u0442\u0435. \n\u0422\u0430\u043A \u0436\u0435 \u0432\u0430\u0436\u043D\u043E \u043F\u043E\u0434\u0442\u044F\u043D\u0443\u0442\u044C \u0443\u0441\u043F\u0435\u0432\u0430\u0435\u043C\u043E\u0441\u0442\u044C \u0438 \u0437\u0430\u043A\u0440\u044B\u0442\u044C \u043F\u0440\u043E\u0431\u0435\u043B\u044B, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043E\u0441\u0442\u0430\u043B\u0438\u0441\u044C \u0441 \u043F\u0440\u043E\u0448\u043B\u044B\u0445 \u043F\u0435\u0440\u0438\u043E\u0434\u043E\u0432. \u041F\u043E \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u043C \u0432\u043E\u043F\u0440\u043E\u0441\u0430\u043C \u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0410\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u044E.\n\n\u0421 30 \u0430\u0432\u0433\u0443\u0441\u0442\u0430 \u0432\u0430\u0448\u0438 \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u044F\u0442\u0441\u044F \u0432 \u043E\u0431\u044B\u0447\u043D\u043E\u043C \u0440\u0435\u0436\u0438\u043C\u0435\u261D\uD83C\uDFFB\n\n\uD83C\uDFD6\u0425\u043E\u0440\u043E\u0448\u0435\u0433\u043E \u0432\u0441\u0435\u043C \u043E\u0442\u0434\u044B\u0445\u0430!\uD83D\uDC83\uD83D\uDD7A\n                ";
+                    return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
+                            parse_mode: "HTML"
+                        })];
+                case 3:
+                    _a.sent();
+                    _a.label = 4;
+                case 4:
+                    j++;
+                    return [3 /*break*/, 2];
+                case 5:
+                    i++;
+                    return [3 /*break*/, 1];
+                case 6: return [2 /*return*/];
             }
         });
     });

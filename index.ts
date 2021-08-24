@@ -130,11 +130,12 @@ schedule.scheduleJob("1 0 13 * * 1", async () => {
     await buildMessageAboutDiscountAndDeadlines(groups)
     await buildCongratulationMessageAfterFirstExam(groups)
     await buildCheatingIsBadMessage(groups)
+    await buildVacationSoonMessage(groups)
     logger.info("Monday 13:00 end")
 
 })
 
-// Здесь идет прибаление недель, в самом начале понедельника, в 00:00 00минут 01 секунд и проверка на каникулы, если каникулы, то группа деактивируется и все
+// Здесь идет прибавление недель, в самом начале понедельника, в 00:00 00минут 01 секунд и проверка на каникулы, если каникулы, то группа деактивируется и все
 schedule.scheduleJob("1 0 0 * * 1", async () => {
     logger.info("Monday 00:00 start")
     const groups = await Group.find()
@@ -151,7 +152,7 @@ schedule.scheduleJob("1 0 0 * * 1", async () => {
 schedule.scheduleJob("1 0 13 * * 2", async () => {
     logger.info("Tuesday 13:00 start")
     const groups = await Group.find()
-    dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
+    dateOnFriday = moment().add(3, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(4, "days").format("DD-MM-YYYY")
     await buildLessonMessage(groups, 2)
     await buildWebinarMessage(groups, 2)
@@ -166,7 +167,7 @@ schedule.scheduleJob("1 0 13 * * 2", async () => {
 schedule.scheduleJob("1 0 13 * * 3", async () => {
     logger.info("Wednesday 13:00 start")
     const groups = await Group.find()
-    dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
+    dateOnFriday = moment().add(2, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(3, "days").format("DD-MM-YYYY")
     await buildLessonMessage(groups, 3)
     await buildWebinarMessage(groups, 3)
@@ -180,7 +181,7 @@ schedule.scheduleJob("1 0 13 * * 3", async () => {
 schedule.scheduleJob("1 0 13 * * 4", async () => {
     logger.info("Thursday 13:00 start")
     const groups = await Group.find()
-    dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
+    dateOnFriday = moment().add(1, "days").format("DD-MM-YYYY")
     dateOfNextSaturday = moment().add(2, "days").format("DD-MM-YYYY")
     await buildLessonMessage(groups, 4)
     await buildWebinarMessage(groups, 4)
@@ -1151,7 +1152,7 @@ const incrementWeek = async (groups: Array<GroupInterface>) => {
         logger.trace("INCR_WEEK: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
         groups[i].currentWeek++
         // @ts-ignore
-        groups[i].save()
+        await groups[i].save()
     }
 }
 
@@ -1168,14 +1169,14 @@ const isHoliday = async (group: GroupInterface) => {
             group.isActive = false
             group.currentWeek -= 1
             // @ts-ignore
-            group.save()
+            await group.save()
             return
         }
     }
     logger.trace("IS_HOLIDAY: Groups " + group.groupName + " does not have holiday")
     group.isActive = true
     // @ts-ignore
-    group.save()
+    await group.save()
 }
 
 
@@ -1349,6 +1350,7 @@ async function buildWishGoodLuckMessageForFirstExam(groups: Array<GroupInterface
 Обращаем ваше внимание на то, что на контрольную у вас выделяется строго определенное время с 11-00 до 19-00, то есть 8 часов. 
 В 19-00 вы должны сдать вашу работу, вне зависимости от того, закончили вы проект или нет. Работы сданные после дедлайна будут штрафоваться существенным снижением баллов.
 
+Напоминаем, что в офисе имеется холодильник и микроволновка, поэтому вы можете взять ссобой еду, напитки для обеда. Чай, кофе, вода, печеньки, приборы у нас имеются😋
             `
             await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
@@ -1404,6 +1406,40 @@ async function buildCheatingIsBadMessage(groups: Array<GroupInterface>) {
             await bot.sendMessage(groups[i].chatId, text, {
                 parse_mode: "HTML"
             })
+        }
+    }
+}
+
+/**
+ * Функция для информирования о наступаюзих через неделю каникулах
+ */
+async function buildVacationSoonMessage(groups: Array<GroupInterface>) {
+    for (let i = 0; i < groups.length; i++) {
+        for (let j = 0; j < groups[i].holidayWeeksNumbers.length; j++) {
+            if (groups[i].holidayWeeksNumbers[j] - 1 === (groups[i].currentWeek + 1)) {
+                const months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"]
+                const holiday = moment().add(1, "weeks").format("DD-MM-YYYY")
+                const parts = holiday.split("-")
+                const day = parseInt(parts[0])
+                const month = months[parseInt(parts[1]) - 1]
+                const text = `
+                #Важнаяинформация 
+
+Уважаемые студенты!
+С ${day} ${month} по ${day + 6} ${month}, у вас будет неделя каникул 🎉
+Хорошенько отдохните за эту неделю и наберитесь сил 😎😴🧘
+
+Все ваши преподаватели уходят в отпуск. Саппорт и лекции в эту неделю проводиться не будут. На вопросы в чате преподаватели отвечать не будут (но могут, по личной инициативе), так что если вы знаете ответ на заданный одногруппником вопрос, обязательно отвечайте. 
+Так же важно подтянуть успеваемость и закрыть пробелы, которые остались с прошлых периодов. По дополнительным вопросам пишите в Администрацию.
+
+С 30 августа ваши занятия возобновятся в обычном режиме☝🏻
+
+🏖Хорошего всем отдыха!💃🕺
+                `
+                await bot.sendMessage(groups[i].chatId, text, {
+                    parse_mode: "HTML"
+                })
+            }
         }
     }
 }
