@@ -163,7 +163,7 @@ var dateOnFriday;
 /**
  * Понедельник
  */
-node_schedule_1.default.scheduleJob("1 15 13 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
+node_schedule_1.default.scheduleJob("1 0 13 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
     var groups;
     return __generator(this, function (_a) {
         switch (_a.label) {

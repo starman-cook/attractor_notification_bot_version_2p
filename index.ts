@@ -117,7 +117,7 @@ let dateOnFriday;
 /**
  * Понедельник
  */
-schedule.scheduleJob("1 15 13 * * 1", async () => {
+schedule.scheduleJob("1 0 13 * * 1", async () => {
     logger.info("Monday 13:00 start")
     const groups = await Group.find()
     dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
