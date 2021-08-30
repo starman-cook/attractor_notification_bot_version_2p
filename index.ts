@@ -117,7 +117,7 @@ let dateOnFriday;
 /**
  * Понедельник
  */
-schedule.scheduleJob("1 0 13 * * 1", async () => {
+schedule.scheduleJob("1 15 13 * * 1", async () => {
     logger.info("Monday 13:00 start")
     const groups = await Group.find()
     dateOnFriday = moment().add(4, "days").format("DD-MM-YYYY")
@@ -1117,7 +1117,7 @@ const buildPaySoonMessage = async (groups: Array<GroupInterface>, date: string) 
     logger.trace("PAY: Start of Building Upcoming Pay Message function")
     for (let i = 0; i < groups.length; i++) {
         logger.trace("PAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
-        if ((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3) {
+        if (groups[i].currentWeek > 3 && (groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive) {
             logger.trace("PAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about upcoming payment")
             await bot.sendMessage(groups[i].chatId, `Всем привет, напоминаем об оплате за текущий месяц, дедлайн до пятницы (${date})`, {
                 parse_mode: "HTML"
@@ -1134,7 +1134,7 @@ const buildPayTodayMessage = async (groups: Array<GroupInterface>) => {
     const months = ["noFirstMonth", "второй", "третий","четвертый","пятый","шестой","седьмой","восьмой","девятый","десятый","одиннадцатый","двенадцатый","тринадцатый","четырнадцатый","пятнадцатый"]
     for (let i = 0; i < groups.length; i++) {
         logger.trace("PAY_TODAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
-        if ((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3) {
+        if (groups[i].currentWeek > 3 && (groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive) {
             logger.trace("PAY_TODAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about today's payment")
             await bot.sendMessage(groups[i].chatId, `Всем привет, #напоминаем об оплате за ${months[(groups[i].currentWeek) / 4]} учебный месяц. Сегодня - ${moment().format("DD-MM-YYYY")}, крайний день внесения  оплаты.`, {
                 parse_mode: "HTML"

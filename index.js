@@ -163,7 +163,7 @@ var dateOnFriday;
 /**
  * Понедельник
  */
-node_schedule_1.default.scheduleJob("1 0 13 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
+node_schedule_1.default.scheduleJob("1 15 13 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
     var groups;
     return __generator(this, function (_a) {
         switch (_a.label) {
@@ -1622,7 +1622,7 @@ var buildPaySoonMessage = function (groups, date) { return __awaiter(void 0, voi
             case 1:
                 if (!(i < groups.length)) return [3 /*break*/, 4];
                 logger.trace("PAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
-                if (!((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3)) return [3 /*break*/, 3];
+                if (!(groups[i].currentWeek > 3 && (groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive)) return [3 /*break*/, 3];
                 logger.trace("PAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about upcoming payment");
                 return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, \u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 \u0442\u0435\u043A\u0443\u0449\u0438\u0439 \u043C\u0435\u0441\u044F\u0446, \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u043E \u043F\u044F\u0442\u043D\u0438\u0446\u044B (" + date + ")", {
                         parse_mode: "HTML"
@@ -1652,7 +1652,7 @@ var buildPayTodayMessage = function (groups) { return __awaiter(void 0, void 0, 
             case 1:
                 if (!(i < groups.length)) return [3 /*break*/, 4];
                 logger.trace("PAY_TODAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
-                if (!((groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive && groups[i].currentWeek > 3)) return [3 /*break*/, 3];
+                if (!(groups[i].currentWeek > 3 && (groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive)) return [3 /*break*/, 3];
                 logger.trace("PAY_TODAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about today's payment");
                 return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 " + months[(groups[i].currentWeek) / 4] + " \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043C\u0435\u0441\u044F\u0446. \u0421\u0435\u0433\u043E\u0434\u043D\u044F - " + moment_1.default().format("DD-MM-YYYY") + ", \u043A\u0440\u0430\u0439\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u0432\u043D\u0435\u0441\u0435\u043D\u0438\u044F  \u043E\u043F\u043B\u0430\u0442\u044B.", {
                         parse_mode: "HTML"
