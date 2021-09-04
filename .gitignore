@@ -1,5 +1,3 @@
 /node_modules
 /.idea
-tokens.js
-tokens.ts
-tokens.js.map
+tokens.txt
