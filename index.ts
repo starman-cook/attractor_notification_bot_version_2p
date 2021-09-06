@@ -465,7 +465,6 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
     const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    console.log("USER**************** ", user)
     await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
         if (c.status == "administrator") {
             isBotAdmin = true
@@ -775,36 +774,35 @@ bot.onText(/\/delete_(.+)/, async (msg, arr: any) => {
  * Первый шифр, азбука Морзе, отправляется аудиофайлом. Зашифрованная команда gotonext
  */
 bot.onText(/\/letsplay/, async (msg) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
+    const isPrivate = msg.chat.type === "private"
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin =  true
-        }
-    });
-    if (isBotAdmin) {
+    if (isPrivate) {
         try {
             logger.silly("User " + user + " started cipher game by command /letsplay")
             const text = `
             <b>Как команду напиши мне что ты слышишь в этом файле (если звука нет, то скачайте файл и запустите через проигрыватель)</b>
         `
-            const send = await bot.sendAudio(msg.chat.id, "./ciphers/guesswhat.wav", {
+            await bot.sendAudio(msg.chat.id, "./ciphers/guesswhat.wav", {
                 caption: text,
                 parse_mode: "HTML"
             })
+        } catch (err) {
+            logger.fatal("User " + user + " crashed bot with /letsplay command")
+            await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением")
+        }
+    } else {
+        try {
+            logger.info("User " + user + " tries to play /letsplay but bot is in public chat")
+            const send = await bot.sendMessage(msg.chat.id, "Я бы с радостью показал и затем удалил квестовое сообщение, но студенты говорят, что я спамю, так что пишите мне эту команду лично")
             await setTimeout(() => {
                 bot.deleteMessage(msg.chat.id, msg.message_id.toString())
                 bot.deleteMessage(msg.chat.id, send.message_id.toString())
             }, 120000)
-        } catch (err) {
-            logger.fatal("User " + user + " crashed bot with /letsplay command")
-            await bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")
+        } catch (e) {
+            logger.fatal("User " + user + " crashed bot with /letsplay command when deleting group answer message")
         }
-    } else {
-        logger.info("User " + user + " tries to play /letsplay but bot is not admin")
-        await bot.sendMessage(msg.chat.id, "Я бы с радостью показал и затем удалил квестовое сообщение, но я лишь обычный юзер, а не админ((((")
+
     }
 })
 

@@ -734,7 +734,6 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(vo
             case 2:
                 userObj = _a.sent();
                 user = userObj.user.username;
-                console.log("USER**************** ", user);
                 return [4 /*yield*/, bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
                         if (c.status == "administrator") {
                             isBotAdmin = true;
@@ -1063,59 +1062,54 @@ bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 
  * Первый шифр, азбука Морзе, отправляется аудиофайлом. Зашифрованная команда gotonext
  */
 bot.onText(/\/letsplay/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isBotAdmin, botId, userObj, user, text, send_9, err_8;
+    var isPrivate, userObj, user, text, err_8, send_9, e_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                isBotAdmin = false;
-                return [4 /*yield*/, bot.getMe()];
-            case 1:
-                botId = _a.sent();
+                isPrivate = msg.chat.type === "private";
                 return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
-            case 2:
+            case 1:
                 userObj = _a.sent();
                 user = userObj.user.username;
-                return [4 /*yield*/, bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-                        if (c.status == "administrator") {
-                            isBotAdmin = true;
-                        }
-                    })];
-            case 3:
-                _a.sent();
-                if (!isBotAdmin) return [3 /*break*/, 10];
-                _a.label = 4;
-            case 4:
-                _a.trys.push([4, 7, , 9]);
+                if (!isPrivate) return [3 /*break*/, 7];
+                _a.label = 2;
+            case 2:
+                _a.trys.push([2, 4, , 6]);
                 logger.silly("User " + user + " started cipher game by command /letsplay");
                 text = "\n            <b>\u041A\u0430\u043A \u043A\u043E\u043C\u0430\u043D\u0434\u0443 \u043D\u0430\u043F\u0438\u0448\u0438 \u043C\u043D\u0435 \u0447\u0442\u043E \u0442\u044B \u0441\u043B\u044B\u0448\u0438\u0448\u044C \u0432 \u044D\u0442\u043E\u043C \u0444\u0430\u0439\u043B\u0435 (\u0435\u0441\u043B\u0438 \u0437\u0432\u0443\u043A\u0430 \u043D\u0435\u0442, \u0442\u043E \u0441\u043A\u0430\u0447\u0430\u0439\u0442\u0435 \u0444\u0430\u0439\u043B \u0438 \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0438\u0433\u0440\u044B\u0432\u0430\u0442\u0435\u043B\u044C)</b>\n        ";
                 return [4 /*yield*/, bot.sendAudio(msg.chat.id, "./ciphers/guesswhat.wav", {
                         caption: text,
                         parse_mode: "HTML"
                     })];
+            case 3:
+                _a.sent();
+                return [3 /*break*/, 6];
+            case 4:
+                err_8 = _a.sent();
+                logger.fatal("User " + user + " crashed bot with /letsplay command");
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением")];
             case 5:
+                _a.sent();
+                return [3 /*break*/, 6];
+            case 6: return [3 /*break*/, 11];
+            case 7:
+                _a.trys.push([7, 10, , 11]);
+                logger.info("User " + user + " tries to play /letsplay but bot is in public chat");
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Я бы с радостью показал и затем удалил квестовое сообщение, но студенты говорят, что я спамю, так что пишите мне эту команду лично")];
+            case 8:
                 send_9 = _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
                         bot.deleteMessage(msg.chat.id, msg.message_id.toString());
                         bot.deleteMessage(msg.chat.id, send_9.message_id.toString());
                     }, 120000)];
-            case 6:
+            case 9:
                 _a.sent();
-                return [3 /*break*/, 9];
-            case 7:
-                err_8 = _a.sent();
-                logger.fatal("User " + user + " crashed bot with /letsplay command");
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
-            case 8:
-                _a.sent();
-                return [3 /*break*/, 9];
-            case 9: return [3 /*break*/, 12];
+                return [3 /*break*/, 11];
             case 10:
-                logger.info("User " + user + " tries to play /letsplay but bot is not admin");
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Я бы с радостью показал и затем удалил квестовое сообщение, но я лишь обычный юзер, а не админ((((")];
-            case 11:
-                _a.sent();
-                _a.label = 12;
-            case 12: return [2 /*return*/];
+                e_1 = _a.sent();
+                logger.fatal("User " + user + " crashed bot with /letsplay command when deleting group answer message");
+                return [3 /*break*/, 11];
+            case 11: return [2 /*return*/];
         }
     });
 }); });
