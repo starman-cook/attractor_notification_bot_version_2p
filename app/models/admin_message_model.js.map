@@ -1,0 +1,1 @@
+{"version":3,"file":"admin_message_model.js","sourceRoot":"","sources":["admin_message_model.ts"],"names":[],"mappings":";;;;;;AAAA,sDAAgC;AAChC,IAAM,MAAM,GAAG,kBAAQ,CAAC,MAAM,CAAA;AAE9B,IAAM,kBAAkB,GAAG,IAAI,MAAM,CAAC;IAClC,OAAO,EAAE,MAAM;IACf,YAAY,EAAE,CAAC,MAAM,CAAC;CACzB,CAAC,CAAA;AAEW,QAAA,YAAY,GAAG,kBAAQ,CAAC,KAAK,CAAC,eAAe,EAAE,kBAAkB,CAAC,CAAA"}

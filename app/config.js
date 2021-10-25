@@ -1,14 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
+require('dotenv').config();
 exports.config = {
     mongoUrl: {
         url: "mongodb://localhost/",
-        // url: "mongodb+srv://QWE123:QWE123@cluster0.rrd3k.mongodb.net/",
         db: "as_telega_3"
     },
-    telegramToken: "",
+    telegramToken: process.env.TELEGRAM_TOKEN,
     telegramPort: 8001,
-    accountant: "Динаре @attractor_almaty22" // лучше писать в родительском падеже, так как в сообщениях группам там имено Кому Чему обращаться по поводу оплаты и прочего бухгалтерского
+    password: process.env.PASSWORD
 };
 //# sourceMappingURL=config.js.map
