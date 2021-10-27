@@ -1798,7 +1798,7 @@ var sendAdminMessages = function (groups, message, week) { return __awaiter(void
                 _a.label = 1;
             case 1:
                 if (!(j < groups.length)) return [3 /*break*/, 4];
-                if (!(week === groups[j].currentWeek)) return [3 /*break*/, 3];
+                if (!(week - 1 === groups[j].currentWeek)) return [3 /*break*/, 3];
                 return [4 /*yield*/, bot.sendMessage(groups[j].chatId, "" + message, {
                         parse_mode: "HTML"
                     })];

@@ -1245,7 +1245,7 @@ const buildSchedulersForAdminMessages = async () => {
 
 const sendAdminMessages = async (groups: Array<GroupInterface>, message : string, week: number) => {
         for (let j = 0; j < groups.length; j++) {
-            if (week === groups[j].currentWeek) {
+            if (week - 1 === groups[j].currentWeek) {
                     await bot.sendMessage(groups[j].chatId, `${message}`, {
                         parse_mode: "HTML"
                     })
