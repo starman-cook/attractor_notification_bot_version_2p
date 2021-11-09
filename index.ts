@@ -1,5 +1,5 @@
 import express from 'express'
-import TelegramBot from 'node-telegram-bot-api'
+import TelegramBot, {Message} from 'node-telegram-bot-api'
 import cors from "cors"
 import mongoose from 'mongoose'
 import {config} from "./app/config";
@@ -8,12 +8,15 @@ import {AdminMessage} from "./app/models/admin_message_model";
 import schedule from 'node-schedule'
 import moment from 'moment'
 import {GroupInterface} from './app/interfaces/group_interface'
-import {AdminMessageInterface} from './app/interfaces/admin_message_interface'
 import { ILogObject, Logger } from "tslog";
 import * as path from "path";
 import * as fs from "fs";
 import _ from 'lodash';
 
+
+moment.updateLocale("en", { week: {
+        dow: 1, // First day of week is Monday
+    }});
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -214,16 +217,9 @@ schedule.scheduleJob("0 1 0 * * 1", async () => {
  */
 bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
     logger.info("Start of /build_ command to create new group")
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
-    if (isBotAdmin) {
+    if (await isBotAdmin(msg)) {
         const admins = await  bot.getChatAdministrators(msg.chat.id)
         let admin = false;
         for (let i = 0; i < admins.length; i++) {
@@ -239,7 +235,6 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
                     oldGroup.delete()
                 }
                 const ii = arr[1].replace(/\s+/g,' ').trim().split(" ")
-                // 2-19:30/5-19:30
                 const lessons = ii[1].split('/')
                 for (let i = 0; i < lessons.length; i++) {
                     lessons[i] = {[lessons[i].split("-")[0]]: lessons[i].split("-")[1]}
@@ -310,16 +305,9 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
  * Внесение изменений в нумерацию тущей недели
  */
 bot.onText(/\/setweek_(.+)/, async (msg, arr: any) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
-    if (isBotAdmin) {
+    if (await isBotAdmin(msg)) {
         const admins = await bot.getChatAdministrators(msg.chat.id)
         let admin = false;
         for (let i = 0; i < admins.length; i++) {
@@ -386,16 +374,9 @@ bot.onText(/\/setweek_(.+)/, async (msg, arr: any) => {
  * Функция принимает все что написано после нижнего подчеркивания, можно написать что-угодно и это созранится в поле groupAdmin в группе
  */
 bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
-    if (isBotAdmin) {
+    if (await isBotAdmin(msg)) {
         const admins = await bot.getChatAdministrators(msg.chat.id)
         let admin = false;
         for (let i = 0; i < admins.length; i++) {
@@ -445,16 +426,9 @@ bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
  * Получение инструкций, команда скрыта, нужно писать ее через / без единой ошибки, если студенты получат к ней доступ, то могут сломать бота
  */
 bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
-    if (isBotAdmin) {
+    if (await isBotAdmin(msg)) {
         const isPrivate = msg.chat.type === "private"
         if (!isPrivate) {
             const admins = await bot.getChatAdministrators(msg.chat.id)
@@ -549,27 +523,20 @@ bot.onText(/\/givemetheinstructionsplease/, async (msg) => {
  * Сообщение автоматически удаляется спустя некоторое время
  */
 bot.onText(/\/show/, async (msg) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
-    if (isBotAdmin) {
+    if (await isBotAdmin(msg)) {
     try {
         const group = await Group.findOne({chatId: msg.chat.id})
         logger.info("User " + user + " is using /show, to see info about group " + group.groupName)
-        const thisWeekSaturday = moment().endOf('week')
+        const thisWeekSunday = moment().endOf('week')
         let diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4))
         for (let i = 0; i < group.holidayWeeksNumbers.length; i++) {
             if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
                 diff += 1
             }
         }
-        const examSaturday = thisWeekSaturday.add(diff, "weeks").format("DD-MM-YYYY")
+        const examSaturday = thisWeekSunday.add(diff, "weeks").subtract(1, "days").format("DD-MM-YYYY")
         const weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',]
 
         let text = `
@@ -641,14 +608,14 @@ bot.onText(/\/allgroups/, async (msg) => {
             const groups = await Group.find()
             for (let i = 0; i < groups.length; i++) {
                 const group = groups[i]
-                const thisWeekSaturday = moment().endOf('week')
+                const thisWeekSunday = moment().endOf('week')
                 let diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4))
                 for (let j = 0; j < group.holidayWeeksNumbers.length; j++) {
                     if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
                         diff += 1
                     }
                 }
-                const examSaturday = thisWeekSaturday.add(diff, "weeks").format("DD-MM-YYYY")
+                const examSaturday = thisWeekSunday.add(diff, "weeks").subtract(1, "days").format("DD-MM-YYYY")
                 const weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',]
 
                 let text = `
@@ -795,22 +762,15 @@ bot.onText(/\/letsplay/, async (msg) => {
  *  чтобы никто не скопировал то, что смог найти другой. Шифр имеет отступ +7 символов, ведет к команде stepthree
  */
 bot.onText(/\/gotonext/, async (msg) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
                 logger.silly("User " + user + " wrote /gotonext in private chat as it should be")
                 await bot.sendMessage(msg.chat.id, "dypal uvd wslhzl av tl aol jvtthuk zalwaoyll")
             } else {
-                if (isBotAdmin) {
+                if (await isBotAdmin(msg)) {
                     logger.silly("User " + user + " wrote /gotonext in group chat")
                     const send = await bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично, я не могу при всех")
                     await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
@@ -833,22 +793,15 @@ bot.onText(/\/gotonext/, async (msg) => {
  *  Код ведет к команде website (исходное предложение you are on the right way my friend now write me the command website)
  */
 bot.onText(/\/stepthree/, async (msg) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
                 logger.silly("User " + user + " wrote /stepthree in private chat as it should be")
                 await bot.sendMessage(msg.chat.id, "yhynen oemotd urywhw aifwee rgrrcb ehiios otetmi nwnemt tadmae")
             } else {
-                if (isBotAdmin) {
+                if (await isBotAdmin(msg)) {
                     logger.silly("User " + user + " wrote /stepthree in group chat")
                     const send = await bot.sendMessage(msg.chat.id, "Если второй шаг был в личной переписке, почему третий должен быть в общем чате?")
                     await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
@@ -878,22 +831,15 @@ bot.onText(/\/stepthree/, async (msg) => {
  * Итоговая команда /243256
  */
 bot.onText(/\/website/, async (msg) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
                 logger.silly("User " + user + " wrote /website in private chat as it should be")
                 await bot.sendMessage(msg.chat.id, "https://starman-cook.github.io/cipher/html.html")
             } else {
-                if (isBotAdmin) {
+                if (await isBotAdmin(msg)) {
                     logger.silly("User " + user + " wrote /website in group chat")
                     const send = await bot.sendMessage(msg.chat.id, "Вы издеваетесь))?")
                     await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
@@ -922,15 +868,8 @@ bot.onText(/\/website/, async (msg) => {
  *  команда итоговая iamthechampion
  */
 bot.onText(/\/243256/, async (msg) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
@@ -943,7 +882,7 @@ bot.onText(/\/243256/, async (msg) => {
                     parse_mode: "HTML"
                 })
             } else {
-                if (isBotAdmin) {
+                if (await isBotAdmin(msg)) {
                     logger.silly("User " + user + " wrote /243256 in group chat")
                     const send = await bot.sendMessage(msg.chat.id, "Вы далеко зашли, и вами движет любопытство, что же ответит бот в общем чате на этот раз. А отвечу я 'notredame'")
                     await bot.deleteMessage(msg.chat.id, msg.message_id.toString())
@@ -967,15 +906,8 @@ bot.onText(/\/243256/, async (msg) => {
  *  о своей победе))) Подумать о призах, может скидку тому, кто первый решит?
  */
 bot.onText(/\/iamthechampion/, async (msg) => {
-    let isBotAdmin: boolean = false;
-    const botId: any = await bot.getMe()
     const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
     const user = userObj.user.username
-    await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
-        if (c.status == "administrator") {
-            isBotAdmin = true
-        }
-    });
         try {
             const isPrivate = msg.chat.type === "private"
             if (isPrivate) {
@@ -992,7 +924,7 @@ bot.onText(/\/iamthechampion/, async (msg) => {
                     parse_mode: 'HTML'
                 })
             } else {
-                if (isBotAdmin) {
+                if (await isBotAdmin(msg)) {
                     logger.silly("User " + user + " wrote /iamthechampion in group chat, we have a winner")
                     const textWinnerToGroup = `
     <b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>
@@ -1225,6 +1157,19 @@ app.get("/logs/:date",  (req, res) => {
         res.status(404).send({message: "Nothing was found"})
     }
 })
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Проверка если бот админ или нет
+ */
+
+const isBotAdmin = async (msg: Message) => {
+    const botId: any = await bot.getMe()
+    return await bot.getChatMember(msg.chat.id, botId.id).then(function (c) {
+        return c.status == "administrator"
+    });
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
