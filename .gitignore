@@ -2,4 +2,5 @@
 /.idea
 tokens.txt
 pass.txt
+ip_adress.txt
 .env

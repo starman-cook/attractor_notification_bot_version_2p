@@ -366,6 +366,16 @@ var buildMainWeekSchedulers = function () {
     }); });
 };
 buildMainWeekSchedulers();
+node_schedule_1.default.scheduleJob("0 1 0 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0: return [4 /*yield*/, relaunchSchedulers()];
+            case 1:
+                _a.sent();
+                return [2 /*return*/];
+        }
+    });
+}); });
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * Здесь мы создаем группу, указывая по каким дням занятия, когда вебинары, когда каникулы, какое текущее занятие и контрольная,
