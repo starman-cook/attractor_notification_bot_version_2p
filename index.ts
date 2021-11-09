@@ -104,6 +104,9 @@ if (bot) {
  */
 let dateOfNextSaturday;
 let dateOnFriday;
+// данная переменая используется в show и allgroups
+const weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',]
+
 
 const buildMainWeekSchedulers = () => {
     /**
@@ -529,15 +532,7 @@ bot.onText(/\/show/, async (msg) => {
     try {
         const group = await Group.findOne({chatId: msg.chat.id})
         logger.info("User " + user + " is using /show, to see info about group " + group.groupName)
-        const thisWeekSunday = moment().endOf('week')
-        let diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4))
-        for (let i = 0; i < group.holidayWeeksNumbers.length; i++) {
-            if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
-                diff += 1
-            }
-        }
-        const examSaturday = thisWeekSunday.add(diff, "weeks").subtract(1, "days").format("DD-MM-YYYY")
-        const weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',]
+        const examSaturday = getDateOfNextExam(group)
 
         let text = `
 <b>----------------------------</b>
@@ -608,15 +603,7 @@ bot.onText(/\/allgroups/, async (msg) => {
             const groups = await Group.find()
             for (let i = 0; i < groups.length; i++) {
                 const group = groups[i]
-                const thisWeekSunday = moment().endOf('week')
-                let diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4))
-                for (let j = 0; j < group.holidayWeeksNumbers.length; j++) {
-                    if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
-                        diff += 1
-                    }
-                }
-                const examSaturday = thisWeekSunday.add(diff, "weeks").subtract(1, "days").format("DD-MM-YYYY")
-                const weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',]
+                const examSaturday = getDateOfNextExam(group)
 
                 let text = `
 <b>----------------------------</b>
@@ -1146,17 +1133,17 @@ function buildMomentDate(date: string) {
     return moment(dt)
 }
 
-
-app.get("/logs/:date",  (req, res) => {
-    try {
-        const date = req.params.date
-        const logs = fs.readFileSync(path.join(__dirname, `/logs/${date}/logs.txt`), 'utf8')
-        const arr = logs.split("\n")
-        res.send(arr)
-    } catch (e) {
-        res.status(404).send({message: "Nothing was found"})
+const getDateOfNextExam = (group: GroupInterface) => {
+    const thisWeekSunday = moment().endOf('week')
+    let diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4))
+    for (let i = 0; i < group.holidayWeeksNumbers.length; i++) {
+        if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
+            diff += 1
+        }
     }
-})
+    return thisWeekSunday.add(diff, "weeks").subtract(1, "days").format("DD-MM-YYYY")
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1172,7 +1159,6 @@ const isBotAdmin = async (msg: Message) => {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 /**
  * Блок по отправке сообщений от администрации, которые админы могут настраивать через сайт (админку)
@@ -1209,6 +1195,12 @@ const relaunchSchedulers = async () => {
     buildMainWeekSchedulers()
     await buildSchedulersForAdminMessages()
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Пути чтобы создавать сообщения, менять, удалять и получать логи
+ */
 
 app.get("/adminMessages",  async (req, res) => {
     try {
@@ -1264,5 +1256,16 @@ app.delete("/delete/:id",  async (req, res) => {
         }
     } catch (e) {
         res.status(400).send({message: "Wrong data provided"})
+    }
+})
+
+app.get("/logs/:date",  (req, res) => {
+    try {
+        const date = req.params.date
+        const logs = fs.readFileSync(path.join(__dirname, `/logs/${date}/logs.txt`), 'utf8')
+        const arr = logs.split("\n")
+        res.send(arr)
+    } catch (e) {
+        res.status(404).send({message: "Nothing was found"})
     }
 })

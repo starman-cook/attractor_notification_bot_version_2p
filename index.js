@@ -152,6 +152,8 @@ else {
  */
 var dateOfNextSaturday;
 var dateOnFriday;
+// данная переменая используется в show и allgroups
+var weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',];
 var buildMainWeekSchedulers = function () {
     /**
      * Понедельник
@@ -736,7 +738,7 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(vo
  * Сообщение автоматически удаляется спустя некоторое время
  */
 bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, group_1, thisWeekSunday, diff, i, examSaturday, weekDays_1, text, _loop_1, i, _loop_2, i, i, send_8, err_5;
+    var userObj, user, group_1, examSaturday, text, _loop_1, i, _loop_2, i, i, send_8, err_5;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -753,20 +755,12 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
             case 4:
                 group_1 = _a.sent();
                 logger.info("User " + user + " is using /show, to see info about group " + group_1.groupName);
-                thisWeekSunday = moment_1.default().endOf('week');
-                diff = 4 - (((group_1.currentWeek + 1) % 4 ? (group_1.currentWeek + 1) % 4 : 4));
-                for (i = 0; i < group_1.holidayWeeksNumbers.length; i++) {
-                    if ((group_1.holidayWeeksNumbers[i] - group_1.currentWeek + 1) < diff || !group_1.isActive) {
-                        diff += 1;
-                    }
-                }
-                examSaturday = thisWeekSunday.add(diff, "weeks").subtract(1, "days").format("DD-MM-YYYY");
-                weekDays_1 = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',];
+                examSaturday = getDateOfNextExam(group_1);
                 text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group_1.groupName + "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#" + (Math.floor(group_1.currentWeek / 4) + 1) + " \u0431\u0443\u0434\u0435\u0442 " + examSaturday + "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group_1.groupAdmin + "</pre> \n";
                 text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
                 _loop_1 = function (i) {
                     text += Object.keys(group_1.lessons[i]).map(function (key) {
-                        return "<pre>" + weekDays_1[parseInt(key) - 1] + " \u0432 " + group_1.lessons[i][key] + "</pre> \n";
+                        return "<pre>" + weekDays[parseInt(key) - 1] + " \u0432 " + group_1.lessons[i][key] + "</pre> \n";
                     });
                 };
                 for (i = 0; i < group_1.lessons.length; i++) {
@@ -775,7 +769,7 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
                 text += "<b>----------------------------</b>\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b>\n";
                 _loop_2 = function (i) {
                     text += Object.keys(group_1.webinars[i]).map(function (key) {
-                        return "<pre>" + weekDays_1[parseInt(key) - 1] + " \u0432 " + group_1.webinars[i][key] + "</pre> \n";
+                        return "<pre>" + weekDays[parseInt(key) - 1] + " \u0432 " + group_1.webinars[i][key] + "</pre> \n";
                     });
                 };
                 for (i = 0; i < group_1.webinars.length; i++) {
@@ -836,20 +830,12 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
             case 3:
                 groups = _a.sent();
                 _loop_3 = function (i) {
-                    var group, thisWeekSunday, diff, j, examSaturday, weekDays, text, _loop_4, j, _loop_5, j, j, numbersDividers;
+                    var group, examSaturday, text, _loop_4, j, _loop_5, j, j, numbersDividers;
                     return __generator(this, function (_b) {
                         switch (_b.label) {
                             case 0:
                                 group = groups[i];
-                                thisWeekSunday = moment_1.default().endOf('week');
-                                diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4));
-                                for (j = 0; j < group.holidayWeeksNumbers.length; j++) {
-                                    if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
-                                        diff += 1;
-                                    }
-                                }
-                                examSaturday = thisWeekSunday.add(diff, "weeks").subtract(1, "days").format("DD-MM-YYYY");
-                                weekDays = ['понедельникам', 'вторникам', 'средам', 'четвергам', 'пятницам', 'субботам', 'воскресеньям',];
+                                examSaturday = getDateOfNextExam(group);
                                 text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group.groupName + "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#" + (Math.floor(group.currentWeek / 4) + 1) + " \u0431\u0443\u0434\u0435\u0442 " + examSaturday + "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group.groupAdmin + "</pre> \n";
                                 text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
                                 _loop_4 = function (j) {
@@ -1648,17 +1634,16 @@ function buildMomentDate(date) {
     var dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0]);
     return moment_1.default(dt);
 }
-app.get("/logs/:date", function (req, res) {
-    try {
-        var date = req.params.date;
-        var logs = fs.readFileSync(path.join(__dirname, "/logs/" + date + "/logs.txt"), 'utf8');
-        var arr = logs.split("\n");
-        res.send(arr);
+var getDateOfNextExam = function (group) {
+    var thisWeekSunday = moment_1.default().endOf('week');
+    var diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4));
+    for (var i = 0; i < group.holidayWeeksNumbers.length; i++) {
+        if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
+            diff += 1;
+        }
     }
-    catch (e) {
-        res.status(404).send({ message: "Nothing was found" });
-    }
-});
+    return thisWeekSunday.add(diff, "weeks").subtract(1, "days").format("DD-MM-YYYY");
+};
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * Проверка если бот админ или нет
@@ -1757,6 +1742,10 @@ var relaunchSchedulers = function () { return __awaiter(void 0, void 0, void 0, 
         }
     });
 }); };
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Пути чтобы создавать сообщения, менять, удалять и получать логи
+ */
 app.get("/adminMessages", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var adm, e_2;
     return __generator(this, function (_a) {
@@ -1860,4 +1849,15 @@ app.delete("/delete/:id", function (req, res) { return __awaiter(void 0, void 0,
         }
     });
 }); });
+app.get("/logs/:date", function (req, res) {
+    try {
+        var date = req.params.date;
+        var logs = fs.readFileSync(path.join(__dirname, "/logs/" + date + "/logs.txt"), 'utf8');
+        var arr = logs.split("\n");
+        res.send(arr);
+    }
+    catch (e) {
+        res.status(404).send({ message: "Nothing was found" });
+    }
+});
 //# sourceMappingURL=index.js.map
