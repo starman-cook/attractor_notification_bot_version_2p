@@ -91,7 +91,7 @@ const bot = new TelegramBot(config.telegramToken, {
 })
 
 if (bot) {
-    logger.info("Bot started, token is " + config.telegramToken)
+    logger.info("Bot started")
 } else {
     logger.fatal("Bot didn't start, something went wrong")
 }
@@ -1173,11 +1173,13 @@ const buildSchedulersForAdminMessages = async () => {
     const groups = await Group.find()
     for (let i = 0; i < adm.length; i++) {
         for (let j = 0; j < adm[i].weeksAndTime.length; j++) {
-            logger.info(`Building started for message week and time (week) ${adm[i].weeksAndTime[j].week} - (min) ${adm[i].weeksAndTime[j].time.minutes} - (hours) ${adm[i].weeksAndTime[j].time.hour}`)
+            logger.info(`Building started for message week and time (week) ${adm[i].weeksAndTime[j].week} - (min) ${adm[i].weeksAndTime[j].time.minutes} - (hours) ${adm[i].weeksAndTime[j].time.hour} (day of week) ${adm[i].weeksAndTime[j].time.day}`)
             schedule.scheduleJob(`0 ${adm[i].weeksAndTime[j].time.minutes} ${adm[i].weeksAndTime[j].time.hour} * * ${adm[i].weeksAndTime[j].time.day}`, async () => {
                 await sendAdminMessages(groups,adm[i].message ,adm[i].weeksAndTime[j].week)
             })
-
+            logger.info(schedule.scheduleJob(`0 ${adm[i].weeksAndTime[j].time.minutes} ${adm[i].weeksAndTime[j].time.hour} * * ${adm[i].weeksAndTime[j].time.day}`, async () => {
+                await sendAdminMessages(groups,adm[i].message ,adm[i].weeksAndTime[j].week)
+            }))
         }
     }
 }
@@ -1197,7 +1199,7 @@ const sendAdminMessages = async (groups: Array<GroupInterface>, message : string
 const relaunchSchedulers = async () => {
     const jobNames = _.keys(schedule.scheduledJobs);
     for(let name of jobNames) schedule.cancelJob(name);
-    buildMainWeekSchedulers()
+    await buildMainWeekSchedulers()
     await buildSchedulersForAdminMessages()
 }
 

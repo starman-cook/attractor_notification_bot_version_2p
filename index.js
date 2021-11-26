@@ -140,7 +140,7 @@ var bot = new node_telegram_bot_api_1.default(config_1.config.telegramToken, {
     }
 });
 if (bot) {
-    logger.info("Bot started, token is " + config_1.config.telegramToken);
+    logger.info("Bot started");
 }
 else {
     logger.fatal("Bot didn't start, something went wrong");
@@ -1683,7 +1683,7 @@ var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, voi
                 groups = _a.sent();
                 _loop_6 = function (i) {
                     var _loop_7 = function (j) {
-                        logger.info("Building started for message week and time (week) ".concat(adm[i].weeksAndTime[j].week, " - (min) ").concat(adm[i].weeksAndTime[j].time.minutes, " - (hours) ").concat(adm[i].weeksAndTime[j].time.hour));
+                        logger.info("Building started for message week and time (week) ".concat(adm[i].weeksAndTime[j].week, " - (min) ").concat(adm[i].weeksAndTime[j].time.minutes, " - (hours) ").concat(adm[i].weeksAndTime[j].time.hour, " (day of week) ").concat(adm[i].weeksAndTime[j].time.day));
                         node_schedule_1.default.scheduleJob("0 ".concat(adm[i].weeksAndTime[j].time.minutes, " ").concat(adm[i].weeksAndTime[j].time.hour, " * * ").concat(adm[i].weeksAndTime[j].time.day), function () { return __awaiter(void 0, void 0, void 0, function () {
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
@@ -1694,6 +1694,16 @@ var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, voi
                                 }
                             });
                         }); });
+                        logger.info(node_schedule_1.default.scheduleJob("0 ".concat(adm[i].weeksAndTime[j].time.minutes, " ").concat(adm[i].weeksAndTime[j].time.hour, " * * ").concat(adm[i].weeksAndTime[j].time.day), function () { return __awaiter(void 0, void 0, void 0, function () {
+                            return __generator(this, function (_a) {
+                                switch (_a.label) {
+                                    case 0: return [4 /*yield*/, sendAdminMessages(groups, adm[i].message, adm[i].weeksAndTime[j].week)];
+                                    case 1:
+                                        _a.sent();
+                                        return [2 /*return*/];
+                                }
+                            });
+                        }); }));
                     };
                     for (var j = 0; j < adm[i].weeksAndTime.length; j++) {
                         _loop_7(j);
@@ -1741,9 +1751,11 @@ var relaunchSchedulers = function () { return __awaiter(void 0, void 0, void 0, 
                     name_1 = jobNames_1[_i];
                     node_schedule_1.default.cancelJob(name_1);
                 }
-                buildMainWeekSchedulers();
-                return [4 /*yield*/, buildSchedulersForAdminMessages()];
+                return [4 /*yield*/, buildMainWeekSchedulers()];
             case 1:
+                _a.sent();
+                return [4 /*yield*/, buildSchedulersForAdminMessages()];
+            case 2:
                 _a.sent();
                 return [2 /*return*/];
         }
