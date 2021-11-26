@@ -1684,6 +1684,7 @@ var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, voi
                 _loop_6 = function (i) {
                     var _loop_7 = function (j) {
                         logger.info("Building started for message week and time (week) ".concat(adm[i].weeksAndTime[j].week, " - (min) ").concat(adm[i].weeksAndTime[j].time.minutes, " - (hours) ").concat(adm[i].weeksAndTime[j].time.hour, " (day of week) ").concat(adm[i].weeksAndTime[j].time.day));
+                        logger.info("GROUPS ".concat(groups));
                         node_schedule_1.default.scheduleJob("0 ".concat(adm[i].weeksAndTime[j].time.minutes, " ").concat(adm[i].weeksAndTime[j].time.hour, " * * ").concat(adm[i].weeksAndTime[j].time.day), function () { return __awaiter(void 0, void 0, void 0, function () {
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
@@ -1694,16 +1695,6 @@ var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, voi
                                 }
                             });
                         }); });
-                        logger.info(node_schedule_1.default.scheduleJob("0 ".concat(adm[i].weeksAndTime[j].time.minutes, " ").concat(adm[i].weeksAndTime[j].time.hour, " * * ").concat(adm[i].weeksAndTime[j].time.day), function () { return __awaiter(void 0, void 0, void 0, function () {
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0: return [4 /*yield*/, sendAdminMessages(groups, adm[i].message, adm[i].weeksAndTime[j].week)];
-                                    case 1:
-                                        _a.sent();
-                                        return [2 /*return*/];
-                                }
-                            });
-                        }); }));
                     };
                     for (var j = 0; j < adm[i].weeksAndTime.length; j++) {
                         _loop_7(j);
@@ -1721,6 +1712,7 @@ var sendAdminMessages = function (groups, message, week) { return __awaiter(void
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
+                logger.info("Checking ADMINMESSAGES START");
                 j = 0;
                 _a.label = 1;
             case 1:
@@ -1737,7 +1729,9 @@ var sendAdminMessages = function (groups, message, week) { return __awaiter(void
             case 3:
                 j++;
                 return [3 /*break*/, 1];
-            case 4: return [2 /*return*/];
+            case 4:
+                logger.info("Checking ADMINMESSAGES END");
+                return [2 /*return*/];
         }
     });
 }); };

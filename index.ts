@@ -1174,18 +1174,17 @@ const buildSchedulersForAdminMessages = async () => {
     for (let i = 0; i < adm.length; i++) {
         for (let j = 0; j < adm[i].weeksAndTime.length; j++) {
             logger.info(`Building started for message week and time (week) ${adm[i].weeksAndTime[j].week} - (min) ${adm[i].weeksAndTime[j].time.minutes} - (hours) ${adm[i].weeksAndTime[j].time.hour} (day of week) ${adm[i].weeksAndTime[j].time.day}`)
+            logger.info(`GROUPS ${groups}`)
             schedule.scheduleJob(`0 ${adm[i].weeksAndTime[j].time.minutes} ${adm[i].weeksAndTime[j].time.hour} * * ${adm[i].weeksAndTime[j].time.day}`, async () => {
                 await sendAdminMessages(groups,adm[i].message ,adm[i].weeksAndTime[j].week)
             })
-            logger.info(schedule.scheduleJob(`0 ${adm[i].weeksAndTime[j].time.minutes} ${adm[i].weeksAndTime[j].time.hour} * * ${adm[i].weeksAndTime[j].time.day}`, async () => {
-                await sendAdminMessages(groups,adm[i].message ,adm[i].weeksAndTime[j].week)
-            }))
         }
     }
 }
 
 const sendAdminMessages = async (groups: Array<GroupInterface>, message : string, week: number) => {
-        for (let j = 0; j < groups.length; j++) {
+    logger.info(`Checking ADMINMESSAGES START`)
+    for (let j = 0; j < groups.length; j++) {
             logger.info(`Checking ADMINMESSAGES group ${groups[j].groupName} whos week is ${groups[j].currentWeek}`)
             if (week - 1 === groups[j].currentWeek) {
                 logger.info(`SUCCESS ADMINMESSAGES group ${groups[j].groupName} whos week is ${groups[j].currentWeek}`)
@@ -1194,6 +1193,7 @@ const sendAdminMessages = async (groups: Array<GroupInterface>, message : string
                     })
                 }
         }
+    logger.info(`Checking ADMINMESSAGES END`)
 }
 
 const relaunchSchedulers = async () => {
