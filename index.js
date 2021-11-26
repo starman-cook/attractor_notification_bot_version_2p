@@ -1684,7 +1684,6 @@ var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, voi
                 _loop_6 = function (i) {
                     var _loop_7 = function (j) {
                         logger.info("Building started for message week and time (week) ".concat(adm[i].weeksAndTime[j].week, " - (min) ").concat(adm[i].weeksAndTime[j].time.minutes, " - (hours) ").concat(adm[i].weeksAndTime[j].time.hour, " (day of week) ").concat(adm[i].weeksAndTime[j].time.day));
-                        logger.info("GROUPS ".concat(groups));
                         node_schedule_1.default.scheduleJob("0 ".concat(adm[i].weeksAndTime[j].time.minutes, " ").concat(adm[i].weeksAndTime[j].time.hour, " * * ").concat(adm[i].weeksAndTime[j].time.day), function () { return __awaiter(void 0, void 0, void 0, function () {
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
