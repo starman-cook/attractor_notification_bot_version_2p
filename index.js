@@ -80,13 +80,13 @@ moment_1.default.updateLocale("en", { week: {
  * @param logObject
  */
 function logToTransport(logObject) {
-    var date = moment_1.default().format("DD_MM_YYYY");
-    var dir = "./logs/" + date;
+    var date = (0, moment_1.default)().format("DD_MM_YYYY");
+    var dir = "./logs/".concat(date);
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir);
     }
     else {
-        fs.appendFileSync(path.join(__dirname, "/logs/" + date + "/logs.txt"), JSON.stringify(logObject) + "\n");
+        fs.appendFileSync(path.join(__dirname, "/logs/".concat(date, "/logs.txt")), JSON.stringify(logObject) + "\n");
     }
 }
 var logger = new tslog_1.Logger();
@@ -118,8 +118,8 @@ mongoose_1.default.connect(config_1.config.mongoUrl.url + config_1.config.mongoU
 /**
  * Подключение express
  */
-var app = express_1.default();
-app.use(cors_1.default());
+var app = (0, express_1.default)();
+app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 app.use(express_1.default.static('logs'));
 app.listen(config_1.config.telegramPort, function () {
@@ -168,8 +168,8 @@ var buildMainWeekSchedulers = function () {
                     return [4 /*yield*/, group_model_1.Group.find()];
                 case 1:
                     groups = _a.sent();
-                    dateOnFriday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
-                    dateOfNextSaturday = moment_1.default().add(5, "days").format("DD-MM-YYYY");
+                    dateOnFriday = (0, moment_1.default)().add(4, "days").format("DD-MM-YYYY");
+                    dateOfNextSaturday = (0, moment_1.default)().add(5, "days").format("DD-MM-YYYY");
                     return [4 /*yield*/, buildLessonMessage(groups, 1)];
                 case 2:
                     _a.sent();
@@ -232,8 +232,8 @@ var buildMainWeekSchedulers = function () {
                     return [4 /*yield*/, group_model_1.Group.find()];
                 case 1:
                     groups = _a.sent();
-                    dateOnFriday = moment_1.default().add(3, "days").format("DD-MM-YYYY");
-                    dateOfNextSaturday = moment_1.default().add(4, "days").format("DD-MM-YYYY");
+                    dateOnFriday = (0, moment_1.default)().add(3, "days").format("DD-MM-YYYY");
+                    dateOfNextSaturday = (0, moment_1.default)().add(4, "days").format("DD-MM-YYYY");
                     return [4 /*yield*/, buildLessonMessage(groups, 2)];
                 case 2:
                     _a.sent();
@@ -263,8 +263,8 @@ var buildMainWeekSchedulers = function () {
                     return [4 /*yield*/, group_model_1.Group.find()];
                 case 1:
                     groups = _a.sent();
-                    dateOnFriday = moment_1.default().add(2, "days").format("DD-MM-YYYY");
-                    dateOfNextSaturday = moment_1.default().add(3, "days").format("DD-MM-YYYY");
+                    dateOnFriday = (0, moment_1.default)().add(2, "days").format("DD-MM-YYYY");
+                    dateOfNextSaturday = (0, moment_1.default)().add(3, "days").format("DD-MM-YYYY");
                     return [4 /*yield*/, buildLessonMessage(groups, 3)];
                 case 2:
                     _a.sent();
@@ -294,8 +294,8 @@ var buildMainWeekSchedulers = function () {
                     return [4 /*yield*/, group_model_1.Group.find()];
                 case 1:
                     groups = _a.sent();
-                    dateOnFriday = moment_1.default().add(1, "days").format("DD-MM-YYYY");
-                    dateOfNextSaturday = moment_1.default().add(2, "days").format("DD-MM-YYYY");
+                    dateOnFriday = (0, moment_1.default)().add(1, "days").format("DD-MM-YYYY");
+                    dateOfNextSaturday = (0, moment_1.default)().add(2, "days").format("DD-MM-YYYY");
                     return [4 /*yield*/, buildLessonMessage(groups, 4)];
                 case 2:
                     _a.sent();
@@ -325,7 +325,7 @@ var buildMainWeekSchedulers = function () {
                     return [4 /*yield*/, group_model_1.Group.find()];
                 case 1:
                     groups = _a.sent();
-                    dateOfNextSaturday = moment_1.default().add(1, "days").format("DD-MM-YYYY");
+                    dateOfNextSaturday = (0, moment_1.default)().add(1, "days").format("DD-MM-YYYY");
                     return [4 /*yield*/, buildLessonMessage(groups, 5)];
                 case 2:
                     _a.sent();
@@ -374,7 +374,9 @@ buildMainWeekSchedulers();
 node_schedule_1.default.scheduleJob("0 1 0 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, relaunchSchedulers()];
+            case 0:
+                logger.info("Monday RELAUNCHSCHEDULERS 13:00 start");
+                return [4 /*yield*/, relaunchSchedulers()];
             case 1:
                 _a.sent();
                 return [2 /*return*/];
@@ -432,7 +434,7 @@ bot.onText(/\/build_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0
                 holidays = ii[3].split('/');
                 holidayWeeksNumbers = [];
                 for (i = 0; i < holidays.length; i++) {
-                    currentMonday = moment_1.default().startOf('isoweek');
+                    currentMonday = (0, moment_1.default)().startOf('isoweek');
                     momentDateHoliday = buildMomentDate(holidays[i]);
                     for (j = 1; j < 78; j++) {
                         if (currentMonday.add(7, "days").format("DD-MM-YYYY") === momentDateHoliday.format("DD-MM-YYYY")) {
@@ -529,7 +531,7 @@ bot.onText(/\/setweek_(.+)/, function (msg, arr) { return __awaiter(void 0, void
                 holidays = group.holidays;
                 holidayWeeksNumbers = [];
                 for (i = 0; i < holidays.length; i++) {
-                    currentMonday = moment_1.default().startOf('isoweek');
+                    currentMonday = (0, moment_1.default)().startOf('isoweek');
                     momentDateHoliday = buildMomentDate(holidays[i]);
                     for (j = 1; j < 78; j++) {
                         if (currentMonday.add(7, "days").format("DD-MM-YYYY") === momentDateHoliday.format("DD-MM-YYYY")) {
@@ -543,7 +545,7 @@ bot.onText(/\/setweek_(.+)/, function (msg, arr) { return __awaiter(void 0, void
                 return [4 /*yield*/, group.save()];
             case 6:
                 _a.sent();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u041D\u043E\u043C\u0435\u0440 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u0438\u0437\u043C\u0435\u043D\u0435\u043D \u043D\u0430 " + arr[1] + ", \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u0443\u0434\u0430\u043B\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 10 \u0441\u0435\u043A\u0443\u043D\u0434")];
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u041D\u043E\u043C\u0435\u0440 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u0438\u0437\u043C\u0435\u043D\u0435\u043D \u043D\u0430 ".concat(arr[1], ", \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u0443\u0434\u0430\u043B\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 10 \u0441\u0435\u043A\u0443\u043D\u0434"))];
             case 7:
                 send_3 = _a.sent();
                 setTimeout(function () {
@@ -619,7 +621,7 @@ bot.onText(/\/setadmin_(.+)/, function (msg, arr) { return __awaiter(void 0, voi
             case 6:
                 _a.sent();
                 logger.info("User " + user + " is using /setadmin to change admin in group " + group.groupName);
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0410\u0434\u043C\u0438\u043D \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u044B " + arr[1] + ", \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u0443\u0434\u0430\u043B\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 10 \u0441\u0435\u043A\u0443\u043D\u0434")];
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0410\u0434\u043C\u0438\u043D \u044D\u0442\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u044B ".concat(arr[1], ", \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u0443\u0434\u0430\u043B\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 10 \u0441\u0435\u043A\u0443\u043D\u0434"))];
             case 7:
                 send_5 = _a.sent();
                 setTimeout(function () {
@@ -756,11 +758,11 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
                 group_1 = _a.sent();
                 logger.info("User " + user + " is using /show, to see info about group " + group_1.groupName);
                 examSaturday = getDateOfNextExam(group_1);
-                text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group_1.groupName + "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#" + (Math.floor(group_1.currentWeek / 4) + 1) + " \u0431\u0443\u0434\u0435\u0442 " + examSaturday + "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group_1.groupAdmin + "</pre> \n";
+                text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>".concat(group_1.groupName, "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#").concat(Math.floor(group_1.currentWeek / 4) + 1, " \u0431\u0443\u0434\u0435\u0442 ").concat(examSaturday, "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>").concat(group_1.groupAdmin, "</pre> \n");
                 text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
                 _loop_1 = function (i) {
                     text += Object.keys(group_1.lessons[i]).map(function (key) {
-                        return "<pre>" + weekDays[parseInt(key) - 1] + " \u0432 " + group_1.lessons[i][key] + "</pre> \n";
+                        return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group_1.lessons[i][key], "</pre> \n");
                     });
                 };
                 for (i = 0; i < group_1.lessons.length; i++) {
@@ -769,7 +771,7 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
                 text += "<b>----------------------------</b>\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b>\n";
                 _loop_2 = function (i) {
                     text += Object.keys(group_1.webinars[i]).map(function (key) {
-                        return "<pre>" + weekDays[parseInt(key) - 1] + " \u0432 " + group_1.webinars[i][key] + "</pre> \n";
+                        return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group_1.webinars[i][key], "</pre> \n");
                     });
                 };
                 for (i = 0; i < group_1.webinars.length; i++) {
@@ -777,7 +779,7 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
                 }
                 text += "<b>----------------------------</b>\n<b>\u0414\u0430\u0442\u044B \u043A\u0430\u043D\u0438\u043A\u0443\u043B</b>\n";
                 for (i = 0; i < group_1.holidays.length; i++) {
-                    text += "<pre>" + group_1.holidays[i] + "</pre> \n";
+                    text += "<pre>".concat(group_1.holidays[i], "</pre> \n");
                 }
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, text, {
                         parse_mode: "HTML"
@@ -836,11 +838,11 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
                             case 0:
                                 group = groups[i];
                                 examSaturday = getDateOfNextExam(group);
-                                text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group.groupName + "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#" + (Math.floor(group.currentWeek / 4) + 1) + " \u0431\u0443\u0434\u0435\u0442 " + examSaturday + "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>" + group.groupAdmin + "</pre> \n";
+                                text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>".concat(group.groupName, "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#").concat(Math.floor(group.currentWeek / 4) + 1, " \u0431\u0443\u0434\u0435\u0442 ").concat(examSaturday, "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>").concat(group.groupAdmin, "</pre> \n");
                                 text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
                                 _loop_4 = function (j) {
                                     text += Object.keys(group.lessons[j]).map(function (key) {
-                                        return "<pre>" + weekDays[parseInt(key) - 1] + " \u0432 " + group.lessons[j][key] + "</pre> \n";
+                                        return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group.lessons[j][key], "</pre> \n");
                                     });
                                 };
                                 for (j = 0; j < group.lessons.length; j++) {
@@ -849,7 +851,7 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
                                 text += "<b>----------------------------</b>\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b>\n";
                                 _loop_5 = function (j) {
                                     text += Object.keys(group.webinars[j]).map(function (key) {
-                                        return "<pre>" + weekDays[parseInt(key) - 1] + " \u0432 " + group.webinars[j][key] + "</pre> \n";
+                                        return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group.webinars[j][key], "</pre> \n");
                                     });
                                 };
                                 for (j = 0; j < group.webinars.length; j++) {
@@ -857,10 +859,10 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
                                 }
                                 text += "<b>----------------------------</b>\n<b>\u0414\u0430\u0442\u044B \u043A\u0430\u043D\u0438\u043A\u0443\u043B</b>\n";
                                 for (j = 0; j < group.holidays.length; j++) {
-                                    text += "<pre>" + group.holidays[j] + "</pre> \n";
+                                    text += "<pre>".concat(group.holidays[j], "</pre> \n");
                                 }
-                                text += "\n<b>ID \u0433\u0440\u0443\u043F\u043F\u044B</b> <pre>" + group._id + "</pre>\n                ";
-                                numbersDividers = "\n<b>----------------------------</b>\n<b>" + (i + 1) + "</b>\n<b>----------------------------</b>\n                ";
+                                text += "\n<b>ID \u0433\u0440\u0443\u043F\u043F\u044B</b> <pre>".concat(group._id, "</pre>\n                ");
+                                numbersDividers = "\n<b>----------------------------</b>\n<b>".concat(i + 1, "</b>\n<b>----------------------------</b>\n                ");
                                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, numbersDividers, {
                                         parse_mode: "HTML"
                                     })];
@@ -910,7 +912,7 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
  * Функция для удаления группы, удалять можно любую группу, это сделано потому, что кто угодно может создать групповой чат с ботом и создать левую группу, которая будет падать в список групп и засорять его
  * Но вы наверное думаете, так и удалить кто угодно сможет, это ж капец. Но не бесспокойтесь, чтобы удалить группу, нужно ввести пароль
  * Вы вводите команду /delete_ затем id группы для удаления (id можно получить из списка всех групп, это нужно потому, что имена могут быть одиннаковыми) и затем через пробел пишите пароль
- * Пароль пока не придумал где хранить, пусть это будет coolPasha (но скорее всего его поменяют в будущем)))
+ * Пароль пока не придумал где хранить, пусть это будет ****** (но скорее всего его поменяют в будущем)))
  */
 bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
     var userObj, user, funnyResponse, ii, group, err_7;
@@ -933,7 +935,7 @@ bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 
                 return [4 /*yield*/, group.delete()];
             case 4:
                 _a.sent();
-                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0413\u0440\u0443\u043F\u043F\u0430 " + group.groupName + " \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0443\u0434\u0430\u043B\u0435\u043D\u0430 \u0438\u0437 \u0431\u0430\u0437\u044B")];
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0413\u0440\u0443\u043F\u043F\u0430 ".concat(group.groupName, " \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0443\u0434\u0430\u043B\u0435\u043D\u0430 \u0438\u0437 \u0431\u0430\u0437\u044B"))];
             case 5:
                 _a.sent();
                 return [3 /*break*/, 8];
@@ -1275,7 +1277,7 @@ bot.onText(/\/iamthechampion/, function (msg) { return __awaiter(void 0, void 0,
                 isPrivate = msg.chat.type === "private";
                 if (!isPrivate) return [3 /*break*/, 4];
                 logger.silly("User " + user + " wrote /iamthechampion in private chat, we have a winner");
-                text = "\n                                    <b>&#9812; \u0412\u044B \u043F\u043E\u0431\u0435\u0434\u0438\u043B\u0438!!!&#127881;&#127881;&#127881;</b>\n    <b>&#9812; \u041E\u0442\u043B\u0438\u0447\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 " + msg.chat.first_name + "&#127881;&#127881;&#127881;</b>\n    <b>&#9812; \u0421\u043E\u043E\u0431\u0449\u0438\u0442\u0435 \u043E \u0441\u0432\u043E\u0435\u0439 \u043F\u043E\u0431\u0435\u0434\u0435 \u0441\u0430\u043F\u043F\u043E\u0440\u0442\u0443&#127881;&#127881;&#127881;</b>\n    <b>&#9812; \u041C\u044B \u043F\u0440\u0438\u0434\u0443\u043C\u0430\u0435\u043C \u043A\u0430\u043A \u0432\u0430\u0441 \u043D\u0430\u0433\u0440\u0430\u0434\u0438\u0442\u044C)))&#127881;&#127881;&#127881;</b>\n    <b>&#9812; \u0412\u044B \u0441\u0443\u043F\u0435\u0440!&#127881;&#127881;&#127881;</b>\n            ";
+                text = "\n                                    <b>&#9812; \u0412\u044B \u043F\u043E\u0431\u0435\u0434\u0438\u043B\u0438!!!&#127881;&#127881;&#127881;</b>\n    <b>&#9812; \u041E\u0442\u043B\u0438\u0447\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 ".concat(msg.chat.first_name, "&#127881;&#127881;&#127881;</b>\n    <b>&#9812; \u0421\u043E\u043E\u0431\u0449\u0438\u0442\u0435 \u043E \u0441\u0432\u043E\u0435\u0439 \u043F\u043E\u0431\u0435\u0434\u0435 \u0441\u0430\u043F\u043F\u043E\u0440\u0442\u0443&#127881;&#127881;&#127881;</b>\n    <b>&#9812; \u041C\u044B \u043F\u0440\u0438\u0434\u0443\u043C\u0430\u0435\u043C \u043A\u0430\u043A \u0432\u0430\u0441 \u043D\u0430\u0433\u0440\u0430\u0434\u0438\u0442\u044C)))&#127881;&#127881;&#127881;</b>\n    <b>&#9812; \u0412\u044B \u0441\u0443\u043F\u0435\u0440!&#127881;&#127881;&#127881;</b>\n            ");
                 return [4 /*yield*/, bot.sendPhoto(msg.chat.id, "./ciphers/winner.jpg", {
                         caption: text,
                         parse_mode: 'HTML'
@@ -1287,7 +1289,7 @@ bot.onText(/\/iamthechampion/, function (msg) { return __awaiter(void 0, void 0,
             case 5:
                 if (!_a.sent()) return [3 /*break*/, 8];
                 logger.silly("User " + user + " wrote /iamthechampion in group chat, we have a winner");
-                textWinnerToGroup = "\n    <b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>\n                    <b>&#9812; \u0421\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u0432\u0441\u0435, " + msg.from.first_name + " \u0440\u0435\u0448\u0438\u043B \u0433\u043E\u043B\u043E\u0432\u043E\u043B\u043E\u043C\u043A\u0443! &#9812;</b>\n    <b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>\n    ";
+                textWinnerToGroup = "\n    <b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>\n                    <b>&#9812; \u0421\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u0432\u0441\u0435, ".concat(msg.from.first_name, " \u0440\u0435\u0448\u0438\u043B \u0433\u043E\u043B\u043E\u0432\u043E\u043B\u043E\u043C\u043A\u0443! &#9812;</b>\n    <b>&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;&#127881;</b>\n    ");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, textWinnerToGroup, {
                         parse_mode: "HTML"
                     })];
@@ -1341,7 +1343,7 @@ var buildLessonMessage = function (groups, day) { return __awaiter(void 0, void 
                 if (!(checkKeyAndGetTime && groups[i].isActive)) return [3 /*break*/, 4];
                 lessonNum = (groups[i].currentWeek) * groups[i].lessons.length + j + 1;
                 logger.trace("LESSON: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about lesson today, lesson number is " + lessonNum);
-                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (" + moment_1.default().format("DD-MM-YYYY") + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u043D\u043E\u043C\u0435\u0440 #" + lessonNum + " \u0432 " + checkKeyAndGetTime + ", \u0447\u0438\u0442\u0430\u0439\u0442\u0435 \u0440\u0430\u0437\u0434\u0430\u0442\u043A\u0443 \u043F\u0435\u0440\u0435\u0434 \u0437\u0430\u043D\u044F\u0442\u0438\u0435\u043C", {
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (".concat((0, moment_1.default)().format("DD-MM-YYYY"), ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u043D\u043E\u043C\u0435\u0440 #").concat(lessonNum, " \u0432 ").concat(checkKeyAndGetTime, ", \u0447\u0438\u0442\u0430\u0439\u0442\u0435 \u0440\u0430\u0437\u0434\u0430\u0442\u043A\u0443 \u043F\u0435\u0440\u0435\u0434 \u0437\u0430\u043D\u044F\u0442\u0438\u0435\u043C"), {
                         parse_mode: "HTML"
                     })];
             case 3:
@@ -1378,7 +1380,7 @@ var buildWebinarMessage = function (groups, day) { return __awaiter(void 0, void
                 checkKeyAndGetTime = groups[i].webinars[j][day];
                 if (!(checkKeyAndGetTime && groups[i].isActive)) return [3 /*break*/, 4];
                 logger.trace("WEBINAR: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about webinar today");
-                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (" + moment_1.default().format("DD-MM-YYYY") + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u0432\u0435\u0431\u0438\u043D\u0430\u0440 \u0432 " + checkKeyAndGetTime + ", \u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0441 \u0445\u044D\u0448\u0442\u044D\u0433\u043E\u043C #\u041D\u0430\u0432\u0435\u0431\u0438\u043D\u0430\u0440", {
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (".concat((0, moment_1.default)().format("DD-MM-YYYY"), ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u0432\u0435\u0431\u0438\u043D\u0430\u0440 \u0432 ").concat(checkKeyAndGetTime, ", \u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0441 \u0445\u044D\u0448\u0442\u044D\u0433\u043E\u043C #\u041D\u0430\u0432\u0435\u0431\u0438\u043D\u0430\u0440"), {
                         parse_mode: "HTML"
                     })];
             case 3:
@@ -1410,7 +1412,7 @@ var buildComingExamMessage = function (groups, date) { return __awaiter(void 0, 
                 logger.trace("EXAM: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
                 if (!((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive)) return [3 /*break*/, 3];
                 logger.trace("EXAM: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about upcoming exam number " + (groups[i].currentWeek + 1) / 4);
-                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0432 \u044D\u0442\u0443 \u0441\u0443\u0431\u0431\u043E\u0442\u0443 (" + date + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043D\u043E\u043C\u0435\u0440 #" + (groups[i].currentWeek + 1) / 4 + " c 11:00 \u0434\u043E 19:00, \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0432\u0441\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043D\u044B\u0435 \u0442\u0435\u043C\u044B \u044D\u0442\u043E\u0433\u043E \u043C\u0435\u0441\u044F\u0446\u0430", {
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0432 \u044D\u0442\u0443 \u0441\u0443\u0431\u0431\u043E\u0442\u0443 (".concat(date, ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043D\u043E\u043C\u0435\u0440 #").concat((groups[i].currentWeek + 1) / 4, " c 11:00 \u0434\u043E 19:00, \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u0432\u0441\u0435 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043D\u044B\u0435 \u0442\u0435\u043C\u044B \u044D\u0442\u043E\u0433\u043E \u043C\u0435\u0441\u044F\u0446\u0430"), {
                         parse_mode: "HTML"
                     })];
             case 2:
@@ -1439,7 +1441,7 @@ var buildTodayExamMessage = function (groups) { return __awaiter(void 0, void 0,
                 logger.trace("EXAM_TODAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
                 if (!((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive)) return [3 /*break*/, 3];
                 logger.trace("EXAM_TODAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about today's exam number " + (groups[i].currentWeek + 1) / 4);
-                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (" + moment_1.default().format("DD-MM-YYYY") + ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043D\u043E\u043C\u0435\u0440 #" + (groups[i].currentWeek + 1) / 4 + " c 11:00 \u0434\u043E 19:00, \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0442\u0440\u0435\u043A\u043A\u0435\u0440\u044B \u0435\u0441\u043B\u0438 \u043F\u0438\u0448\u0438\u0442\u0435 \u043E\u043D\u043B\u0430\u0439\u043D, \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0432\u0441\u0435 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u043C\u0443 \u043C\u043D\u0435\u043D\u0438\u044E \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u044B", {
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (".concat((0, moment_1.default)().format("DD-MM-YYYY"), ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u043D\u043E\u043C\u0435\u0440 #").concat((groups[i].currentWeek + 1) / 4, " c 11:00 \u0434\u043E 19:00, \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0442\u0440\u0435\u043A\u043A\u0435\u0440\u044B \u0435\u0441\u043B\u0438 \u043F\u0438\u0448\u0438\u0442\u0435 \u043E\u043D\u043B\u0430\u0439\u043D, \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0432\u0441\u0435 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u043C\u0443 \u043C\u043D\u0435\u043D\u0438\u044E \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u044B"), {
                         parse_mode: "HTML"
                     })];
             case 2:
@@ -1468,7 +1470,7 @@ var buildPaySoonMessage = function (groups, date) { return __awaiter(void 0, voi
                 logger.trace("PAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
                 if (!(groups[i].currentWeek > 3 && (groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive)) return [3 /*break*/, 3];
                 logger.trace("PAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about upcoming payment");
-                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, \u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 \u0442\u0435\u043A\u0443\u0449\u0438\u0439 \u043C\u0435\u0441\u044F\u0446, \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u043E \u043F\u044F\u0442\u043D\u0438\u0446\u044B (" + date + ")", {
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, \u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 \u0442\u0435\u043A\u0443\u0449\u0438\u0439 \u043C\u0435\u0441\u044F\u0446, \u0434\u0435\u0434\u043B\u0430\u0439\u043D \u0434\u043E \u043F\u044F\u0442\u043D\u0438\u0446\u044B (".concat(date, ")"), {
                         parse_mode: "HTML"
                     })];
             case 2:
@@ -1498,7 +1500,7 @@ var buildPayTodayMessage = function (groups) { return __awaiter(void 0, void 0, 
                 logger.trace("PAY_TODAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
                 if (!(groups[i].currentWeek > 3 && (groups[i].currentWeek + 1) % 4 === 1 && groups[i].isActive)) return [3 /*break*/, 3];
                 logger.trace("PAY_TODAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about today's payment");
-                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 " + months[(groups[i].currentWeek) / 4] + " \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043C\u0435\u0441\u044F\u0446. \u0421\u0435\u0433\u043E\u0434\u043D\u044F - " + moment_1.default().format("DD-MM-YYYY") + ", \u043A\u0440\u0430\u0439\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u0432\u043D\u0435\u0441\u0435\u043D\u0438\u044F  \u043E\u043F\u043B\u0430\u0442\u044B.", {
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u0441\u0435\u043C \u043F\u0440\u0438\u0432\u0435\u0442, #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C \u043E\u0431 \u043E\u043F\u043B\u0430\u0442\u0435 \u0437\u0430 ".concat(months[(groups[i].currentWeek) / 4], " \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043C\u0435\u0441\u044F\u0446. \u0421\u0435\u0433\u043E\u0434\u043D\u044F - ").concat((0, moment_1.default)().format("DD-MM-YYYY"), ", \u043A\u0440\u0430\u0439\u043D\u0438\u0439 \u0434\u0435\u043D\u044C \u0432\u043D\u0435\u0441\u0435\u043D\u0438\u044F  \u043E\u043F\u043B\u0430\u0442\u044B."), {
                         parse_mode: "HTML"
                     })];
             case 2:
@@ -1599,15 +1601,15 @@ function buildVacationSoonMessage(groups) {
                     if (!(j < groups[i].holidayWeeksNumbers.length)) return [3 /*break*/, 5];
                     if (!(groups[i].holidayWeeksNumbers[j] - 1 === (groups[i].currentWeek + 1))) return [3 /*break*/, 4];
                     months = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
-                    holiday = moment_1.default().add(1, "weeks").format("DD-MM-YYYY");
+                    holiday = (0, moment_1.default)().add(1, "weeks").format("DD-MM-YYYY");
                     parts = holiday.split("-");
                     day = parseInt(parts[0]);
                     month = months[parseInt(parts[1]) - 1];
-                    holidayEnd = moment_1.default().add(2, "weeks").format("DD-MM-YYYY");
+                    holidayEnd = (0, moment_1.default)().add(2, "weeks").format("DD-MM-YYYY");
                     partsEnd = holidayEnd.split("-");
                     dayEnd = parseInt(partsEnd[0]);
                     monthEnd = months[parseInt(partsEnd[1]) - 1];
-                    text = "\n                #\u0412\u0430\u0436\u043D\u0430\u044F\u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044F \n\n\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!\n\u0421 " + day + " " + month + " \u043F\u043E " + dayEnd + " " + monthEnd + ", \u0443 \u0432\u0430\u0441 \u0431\u0443\u0434\u0435\u0442 \u043D\u0435\u0434\u0435\u043B\u044F \u043A\u0430\u043D\u0438\u043A\u0443\u043B \uD83C\uDF89\n\u0425\u043E\u0440\u043E\u0448\u0435\u043D\u044C\u043A\u043E \u043E\u0442\u0434\u043E\u0445\u043D\u0438\u0442\u0435 \u0437\u0430 \u044D\u0442\u0443 \u043D\u0435\u0434\u0435\u043B\u044E \u0438 \u043D\u0430\u0431\u0435\u0440\u0438\u0442\u0435\u0441\u044C \u0441\u0438\u043B \uD83D\uDE0E\uD83D\uDE34\uD83E\uDDD8\n\n\u0412\u0441\u0435 \u0432\u0430\u0448\u0438 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0438 \u0443\u0445\u043E\u0434\u044F\u0442 \u0432 \u043E\u0442\u043F\u0443\u0441\u043A. \u0421\u0430\u043F\u043F\u043E\u0440\u0442 \u0438 \u043B\u0435\u043A\u0446\u0438\u0438 \u0432 \u044D\u0442\u0443 \u043D\u0435\u0434\u0435\u043B\u044E \u043F\u0440\u043E\u0432\u043E\u0434\u0438\u0442\u044C\u0441\u044F \u043D\u0435 \u0431\u0443\u0434\u0443\u0442. \u041D\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0432 \u0447\u0430\u0442\u0435 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0438 \u043E\u0442\u0432\u0435\u0447\u0430\u0442\u044C \u043D\u0435 \u0431\u0443\u0434\u0443\u0442 (\u043D\u043E \u043C\u043E\u0433\u0443\u0442, \u043F\u043E \u043B\u0438\u0447\u043D\u043E\u0439 \u0438\u043D\u0438\u0446\u0438\u0430\u0442\u0438\u0432\u0435), \u0442\u0430\u043A \u0447\u0442\u043E \u0435\u0441\u043B\u0438 \u0432\u044B \u0437\u043D\u0430\u0435\u0442\u0435 \u043E\u0442\u0432\u0435\u0442 \u043D\u0430 \u0437\u0430\u0434\u0430\u043D\u043D\u044B\u0439 \u043E\u0434\u043D\u043E\u0433\u0440\u0443\u043F\u043F\u043D\u0438\u043A\u043E\u043C \u0432\u043E\u043F\u0440\u043E\u0441, \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u043E \u043E\u0442\u0432\u0435\u0447\u0430\u0439\u0442\u0435. \n\u0422\u0430\u043A \u0436\u0435 \u0432\u0430\u0436\u043D\u043E \u043F\u043E\u0434\u0442\u044F\u043D\u0443\u0442\u044C \u0443\u0441\u043F\u0435\u0432\u0430\u0435\u043C\u043E\u0441\u0442\u044C \u0438 \u0437\u0430\u043A\u0440\u044B\u0442\u044C \u043F\u0440\u043E\u0431\u0435\u043B\u044B, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043E\u0441\u0442\u0430\u043B\u0438\u0441\u044C \u0441 \u043F\u0440\u043E\u0448\u043B\u044B\u0445 \u043F\u0435\u0440\u0438\u043E\u0434\u043E\u0432. \u041F\u043E \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u043C \u0432\u043E\u043F\u0440\u043E\u0441\u0430\u043C \u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0410\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u044E.\n\n\u0421 " + dayEnd + " " + monthEnd + " \u0432\u0430\u0448\u0438 \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u044F\u0442\u0441\u044F \u0432 \u043E\u0431\u044B\u0447\u043D\u043E\u043C \u0440\u0435\u0436\u0438\u043C\u0435\u261D\uD83C\uDFFB\n\n\uD83C\uDFD6\u0425\u043E\u0440\u043E\u0448\u0435\u0433\u043E \u0432\u0441\u0435\u043C \u043E\u0442\u0434\u044B\u0445\u0430!\uD83D\uDC83\uD83D\uDD7A\n                ";
+                    text = "\n                #\u0412\u0430\u0436\u043D\u0430\u044F\u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044F \n\n\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0441\u0442\u0443\u0434\u0435\u043D\u0442\u044B!\n\u0421 ".concat(day, " ").concat(month, " \u043F\u043E ").concat(dayEnd, " ").concat(monthEnd, ", \u0443 \u0432\u0430\u0441 \u0431\u0443\u0434\u0435\u0442 \u043D\u0435\u0434\u0435\u043B\u044F \u043A\u0430\u043D\u0438\u043A\u0443\u043B \uD83C\uDF89\n\u0425\u043E\u0440\u043E\u0448\u0435\u043D\u044C\u043A\u043E \u043E\u0442\u0434\u043E\u0445\u043D\u0438\u0442\u0435 \u0437\u0430 \u044D\u0442\u0443 \u043D\u0435\u0434\u0435\u043B\u044E \u0438 \u043D\u0430\u0431\u0435\u0440\u0438\u0442\u0435\u0441\u044C \u0441\u0438\u043B \uD83D\uDE0E\uD83D\uDE34\uD83E\uDDD8\n\n\u0412\u0441\u0435 \u0432\u0430\u0448\u0438 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0438 \u0443\u0445\u043E\u0434\u044F\u0442 \u0432 \u043E\u0442\u043F\u0443\u0441\u043A. \u0421\u0430\u043F\u043F\u043E\u0440\u0442 \u0438 \u043B\u0435\u043A\u0446\u0438\u0438 \u0432 \u044D\u0442\u0443 \u043D\u0435\u0434\u0435\u043B\u044E \u043F\u0440\u043E\u0432\u043E\u0434\u0438\u0442\u044C\u0441\u044F \u043D\u0435 \u0431\u0443\u0434\u0443\u0442. \u041D\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \u0432 \u0447\u0430\u0442\u0435 \u043F\u0440\u0435\u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0435\u043B\u0438 \u043E\u0442\u0432\u0435\u0447\u0430\u0442\u044C \u043D\u0435 \u0431\u0443\u0434\u0443\u0442 (\u043D\u043E \u043C\u043E\u0433\u0443\u0442, \u043F\u043E \u043B\u0438\u0447\u043D\u043E\u0439 \u0438\u043D\u0438\u0446\u0438\u0430\u0442\u0438\u0432\u0435), \u0442\u0430\u043A \u0447\u0442\u043E \u0435\u0441\u043B\u0438 \u0432\u044B \u0437\u043D\u0430\u0435\u0442\u0435 \u043E\u0442\u0432\u0435\u0442 \u043D\u0430 \u0437\u0430\u0434\u0430\u043D\u043D\u044B\u0439 \u043E\u0434\u043D\u043E\u0433\u0440\u0443\u043F\u043F\u043D\u0438\u043A\u043E\u043C \u0432\u043E\u043F\u0440\u043E\u0441, \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u043E \u043E\u0442\u0432\u0435\u0447\u0430\u0439\u0442\u0435. \n\u0422\u0430\u043A \u0436\u0435 \u0432\u0430\u0436\u043D\u043E \u043F\u043E\u0434\u0442\u044F\u043D\u0443\u0442\u044C \u0443\u0441\u043F\u0435\u0432\u0430\u0435\u043C\u043E\u0441\u0442\u044C \u0438 \u0437\u0430\u043A\u0440\u044B\u0442\u044C \u043F\u0440\u043E\u0431\u0435\u043B\u044B, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043E\u0441\u0442\u0430\u043B\u0438\u0441\u044C \u0441 \u043F\u0440\u043E\u0448\u043B\u044B\u0445 \u043F\u0435\u0440\u0438\u043E\u0434\u043E\u0432. \u041F\u043E \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u043C \u0432\u043E\u043F\u0440\u043E\u0441\u0430\u043C \u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0410\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u044E.\n\n\u0421 ").concat(dayEnd, " ").concat(monthEnd, " \u0432\u0430\u0448\u0438 \u0437\u0430\u043D\u044F\u0442\u0438\u044F \u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u044F\u0442\u0441\u044F \u0432 \u043E\u0431\u044B\u0447\u043D\u043E\u043C \u0440\u0435\u0436\u0438\u043C\u0435\u261D\uD83C\uDFFB\n\n\uD83C\uDFD6\u0425\u043E\u0440\u043E\u0448\u0435\u0433\u043E \u0432\u0441\u0435\u043C \u043E\u0442\u0434\u044B\u0445\u0430!\uD83D\uDC83\uD83D\uDD7A\n                ");
                     return [4 /*yield*/, bot.sendMessage(groups[i].chatId, text, {
                             parse_mode: "HTML"
                         })];
@@ -1632,10 +1634,10 @@ function buildVacationSoonMessage(groups) {
 function buildMomentDate(date) {
     var parts = date.split("-");
     var dt = new Date(parts[2] + "-" + parts[1] + "-" + parts[0]);
-    return moment_1.default(dt);
+    return (0, moment_1.default)(dt);
 }
 var getDateOfNextExam = function (group) {
-    var thisWeekSunday = moment_1.default().endOf('week');
+    var thisWeekSunday = (0, moment_1.default)().endOf('week');
     var diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4));
     for (var i = 0; i < group.holidayWeeksNumbers.length; i++) {
         if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
@@ -1671,7 +1673,9 @@ var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, voi
     var adm, groups, _loop_6, i;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, admin_message_model_1.AdminMessage.find()];
+            case 0:
+                logger.info("Building ADMIN MESSAGES START");
+                return [4 /*yield*/, admin_message_model_1.AdminMessage.find()];
             case 1:
                 adm = _a.sent();
                 return [4 /*yield*/, group_model_1.Group.find()];
@@ -1679,7 +1683,8 @@ var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, voi
                 groups = _a.sent();
                 _loop_6 = function (i) {
                     var _loop_7 = function (j) {
-                        node_schedule_1.default.scheduleJob("0 " + adm[i].weeksAndTime[j].time.minutes + " " + adm[i].weeksAndTime[j].time.hour + " * * " + adm[i].weeksAndTime[j].time.day, function () { return __awaiter(void 0, void 0, void 0, function () {
+                        logger.info("Building started for message week and time (week) ".concat(adm[i].weeksAndTime[j].week, " - (min) ").concat(adm[i].weeksAndTime[j].time.minutes, " - (hours) ").concat(adm[i].weeksAndTime[j].time.hour));
+                        node_schedule_1.default.scheduleJob("0 ".concat(adm[i].weeksAndTime[j].time.minutes, " ").concat(adm[i].weeksAndTime[j].time.hour, " * * ").concat(adm[i].weeksAndTime[j].time.day), function () { return __awaiter(void 0, void 0, void 0, function () {
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0: return [4 /*yield*/, sendAdminMessages(groups, adm[i].message, adm[i].weeksAndTime[j].week)];
@@ -1710,8 +1715,10 @@ var sendAdminMessages = function (groups, message, week) { return __awaiter(void
                 _a.label = 1;
             case 1:
                 if (!(j < groups.length)) return [3 /*break*/, 4];
+                logger.info("Checking ADMINMESSAGES group ".concat(groups[j].groupName, " whos week is ").concat(groups[j].currentWeek));
                 if (!(week - 1 === groups[j].currentWeek)) return [3 /*break*/, 3];
-                return [4 /*yield*/, bot.sendMessage(groups[j].chatId, "" + message, {
+                logger.info("SUCCESS ADMINMESSAGES group ".concat(groups[j].groupName, " whos week is ").concat(groups[j].currentWeek));
+                return [4 /*yield*/, bot.sendMessage(groups[j].chatId, "".concat(message), {
                         parse_mode: "HTML"
                     })];
             case 2:
@@ -1852,7 +1859,7 @@ app.delete("/delete/:id", function (req, res) { return __awaiter(void 0, void 0,
 app.get("/logs/:date", function (req, res) {
     try {
         var date = req.params.date;
-        var logs = fs.readFileSync(path.join(__dirname, "/logs/" + date + "/logs.txt"), 'utf8');
+        var logs = fs.readFileSync(path.join(__dirname, "/logs/".concat(date, "/logs.txt")), 'utf8');
         var arr = logs.split("\n");
         res.send(arr);
     }

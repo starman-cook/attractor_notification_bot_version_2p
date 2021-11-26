@@ -209,6 +209,7 @@ const buildMainWeekSchedulers = () => {
 buildMainWeekSchedulers()
 
 schedule.scheduleJob("0 1 0 * * 1", async () => {
+    logger.info("Monday RELAUNCHSCHEDULERS 13:00 start")
     await relaunchSchedulers()
 })
 
@@ -1167,10 +1168,12 @@ const isBotAdmin = async (msg: Message) => {
 
 
 const buildSchedulersForAdminMessages = async () => {
+    logger.info("Building ADMIN MESSAGES START")
     const adm = await AdminMessage.find()
     const groups = await Group.find()
     for (let i = 0; i < adm.length; i++) {
         for (let j = 0; j < adm[i].weeksAndTime.length; j++) {
+            logger.info(`Building started for message week and time (week) ${adm[i].weeksAndTime[j].week} - (min) ${adm[i].weeksAndTime[j].time.minutes} - (hours) ${adm[i].weeksAndTime[j].time.hour}`)
             schedule.scheduleJob(`0 ${adm[i].weeksAndTime[j].time.minutes} ${adm[i].weeksAndTime[j].time.hour} * * ${adm[i].weeksAndTime[j].time.day}`, async () => {
                 await sendAdminMessages(groups,adm[i].message ,adm[i].weeksAndTime[j].week)
             })
@@ -1181,8 +1184,10 @@ const buildSchedulersForAdminMessages = async () => {
 
 const sendAdminMessages = async (groups: Array<GroupInterface>, message : string, week: number) => {
         for (let j = 0; j < groups.length; j++) {
+            logger.info(`Checking ADMINMESSAGES group ${groups[j].groupName} whos week is ${groups[j].currentWeek}`)
             if (week - 1 === groups[j].currentWeek) {
-                    await bot.sendMessage(groups[j].chatId, `${message}`, {
+                logger.info(`SUCCESS ADMINMESSAGES group ${groups[j].groupName} whos week is ${groups[j].currentWeek}`)
+                await bot.sendMessage(groups[j].chatId, `${message}`, {
                         parse_mode: "HTML"
                     })
                 }
