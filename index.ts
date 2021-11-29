@@ -135,6 +135,7 @@ const buildMainWeekSchedulers = () => {
         for (let i = 0; i < groups.length; i++) {
             await isHoliday(groups[i])
         }
+        await relaunchSchedulers()
         logger.info("Monday 00:00 end")
     })
 
@@ -206,13 +207,6 @@ const buildMainWeekSchedulers = () => {
         logger.info("Saturday 13:00 end")
     })
 }
-buildMainWeekSchedulers()
-
-schedule.scheduleJob("0 1 0 * * 1", async () => {
-    logger.info("Monday RELAUNCHSCHEDULERS 13:00 start")
-    await relaunchSchedulers()
-})
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -1185,7 +1179,7 @@ const sendAdminMessages = async (groups: Array<GroupInterface>, message : string
     logger.info(`Checking ADMINMESSAGES START`)
     for (let j = 0; j < groups.length; j++) {
             logger.info(`Checking ADMINMESSAGES group ${groups[j].groupName} whos week is ${groups[j].currentWeek}`)
-            if (week - 1 === groups[j].currentWeek) {
+            if (week - 1 === groups[j].currentWeek && groups[j].isActive) {
                 logger.info(`SUCCESS ADMINMESSAGES group ${groups[j].groupName} whos week is ${groups[j].currentWeek}`)
                 await bot.sendMessage(groups[j].chatId, `${message}`, {
                         parse_mode: "HTML"
@@ -1196,12 +1190,17 @@ const sendAdminMessages = async (groups: Array<GroupInterface>, message : string
 }
 
 const relaunchSchedulers = async () => {
+    logger.info("START OF RELAUNCHSCHEDULERS")
     const jobNames = _.keys(schedule.scheduledJobs);
     for(let name of jobNames) schedule.cancelJob(name);
     await buildMainWeekSchedulers()
     await buildSchedulersForAdminMessages()
+    logger.info("END OF RELAUNCHSCHEDULERS")
 }
 
+relaunchSchedulers().then(() => {
+    logger.info("RELAUNCH SUCCESS")
+})
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**

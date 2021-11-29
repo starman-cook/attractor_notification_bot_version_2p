@@ -214,7 +214,9 @@ var buildMainWeekSchedulers = function () {
                 case 5:
                     i++;
                     return [3 /*break*/, 3];
-                case 6:
+                case 6: return [4 /*yield*/, relaunchSchedulers()];
+                case 7:
+                    _a.sent();
                     logger.info("Monday 00:00 end");
                     return [2 /*return*/];
             }
@@ -370,19 +372,6 @@ var buildMainWeekSchedulers = function () {
         });
     }); });
 };
-buildMainWeekSchedulers();
-node_schedule_1.default.scheduleJob("0 1 0 * * 1", function () { return __awaiter(void 0, void 0, void 0, function () {
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                logger.info("Monday RELAUNCHSCHEDULERS 13:00 start");
-                return [4 /*yield*/, relaunchSchedulers()];
-            case 1:
-                _a.sent();
-                return [2 /*return*/];
-        }
-    });
-}); });
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * Здесь мы создаем группу, указывая по каким дням занятия, когда вебинары, когда каникулы, какое текущее занятие и контрольная,
@@ -1717,7 +1706,7 @@ var sendAdminMessages = function (groups, message, week) { return __awaiter(void
             case 1:
                 if (!(j < groups.length)) return [3 /*break*/, 4];
                 logger.info("Checking ADMINMESSAGES group ".concat(groups[j].groupName, " whos week is ").concat(groups[j].currentWeek));
-                if (!(week - 1 === groups[j].currentWeek)) return [3 /*break*/, 3];
+                if (!(week - 1 === groups[j].currentWeek && groups[j].isActive)) return [3 /*break*/, 3];
                 logger.info("SUCCESS ADMINMESSAGES group ".concat(groups[j].groupName, " whos week is ").concat(groups[j].currentWeek));
                 return [4 /*yield*/, bot.sendMessage(groups[j].chatId, "".concat(message), {
                         parse_mode: "HTML"
@@ -1739,6 +1728,7 @@ var relaunchSchedulers = function () { return __awaiter(void 0, void 0, void 0, 
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
+                logger.info("START OF RELAUNCHSCHEDULERS");
                 jobNames = lodash_1.default.keys(node_schedule_1.default.scheduledJobs);
                 for (_i = 0, jobNames_1 = jobNames; _i < jobNames_1.length; _i++) {
                     name_1 = jobNames_1[_i];
@@ -1750,10 +1740,14 @@ var relaunchSchedulers = function () { return __awaiter(void 0, void 0, void 0, 
                 return [4 /*yield*/, buildSchedulersForAdminMessages()];
             case 2:
                 _a.sent();
+                logger.info("END OF RELAUNCHSCHEDULERS");
                 return [2 /*return*/];
         }
     });
 }); };
+relaunchSchedulers().then(function () {
+    logger.info("RELAUNCH SUCCESS");
+});
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * Пути чтобы создавать сообщения, менять, удалять и получать логи
