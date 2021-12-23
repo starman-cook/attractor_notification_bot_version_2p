@@ -1629,7 +1629,7 @@ var getDateOfNextExam = function (group) {
     var thisWeekSunday = (0, moment_1.default)().endOf('week');
     var diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4));
     for (var i = 0; i < group.holidayWeeksNumbers.length; i++) {
-        if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
+        if ((group.holidayWeeksNumbers[i] - (group.currentWeek + 1)) < diff || !group.isActive) {
             diff += 1;
         }
     }

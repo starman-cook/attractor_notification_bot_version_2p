@@ -1132,7 +1132,7 @@ const getDateOfNextExam = (group: GroupInterface) => {
     const thisWeekSunday = moment().endOf('week')
     let diff = 4 - (((group.currentWeek + 1) % 4 ? (group.currentWeek + 1) % 4 : 4))
     for (let i = 0; i < group.holidayWeeksNumbers.length; i++) {
-        if ((group.holidayWeeksNumbers[i] - group.currentWeek + 1) < diff || !group.isActive) {
+        if ((group.holidayWeeksNumbers[i] - (group.currentWeek + 1)) < diff || !group.isActive) {
             diff += 1
         }
     }
