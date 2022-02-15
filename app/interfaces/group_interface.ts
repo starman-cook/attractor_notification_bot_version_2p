@@ -8,4 +8,5 @@ export interface GroupInterface {
     holidayWeeksNumbers: Array<number>
     groupAdmin: string
     isActive: boolean
+    isESDP: boolean
 }

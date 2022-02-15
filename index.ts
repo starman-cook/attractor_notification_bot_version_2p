@@ -268,7 +268,7 @@ bot.onText(/\/build_(.+)/, async (msg, arr: any) => {
 
                 await group.save()
                 const send = await bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")
-
+                await relaunchSchedulers()
                 setTimeout(() => {
                     bot.deleteMessage(msg.chat.id, send.message_id.toString())
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString())
@@ -334,6 +334,7 @@ bot.onText(/\/setweek_(.+)/, async (msg, arr: any) => {
                 group.holidayWeeksNumbers = holidayWeeksNumbers
                 await group.save()
                 const send = await bot.sendMessage(msg.chat.id, `Номер текущей недели изменен на ${arr[1]}, сообщение удалится через 10 секунд`)
+                await relaunchSchedulers()
 
                 setTimeout(() => {
                     bot.deleteMessage(msg.chat.id, send.message_id.toString())
@@ -416,6 +417,65 @@ bot.onText(/\/setadmin_(.+)/, async (msg, arr: any) => {
         }
     } else {
         logger.info("User " + user + " is trying to use /setadmin, but bot is not admin")
+        await bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")
+    }
+})
+
+/**
+ * Меняем статус группы на то, что начался ESDP, чтобы сообщения не отображали данные о контрольных и прочей лишней информации
+ * Также пропускается проверка по контрольной и вебинарам, чтобы сообщения группе более не отправлялись
+ */
+bot.onText(/\/esdp_(.+)/, async (msg, arr: any) => {
+    const userObj = await bot.getChatMember(msg.chat.id, msg.from!.id.toString())
+    const user = userObj.user.username
+    if (await isBotAdmin(msg)) {
+        const admins = await bot.getChatAdministrators(msg.chat.id)
+        let admin = false;
+        for (let i = 0; i < admins.length; i++) {
+            if (admins[i].user.id === msg.from!.id) {
+                admin = true
+            }
+        }
+        if (admin) {
+            try {
+                const group = await Group.findOne({chatId: msg.chat.id})
+                const ii = arr[1].replace(/\s+/g,' ').trim().split(" ")
+                const lessons = ii[0].split('/')
+                for (let i = 0; i < lessons.length; i++) {
+                    lessons[i] = {[lessons[i].split("-")[0]]: lessons[i].split("-")[1]}
+                }
+                group.lessons = lessons
+                group.isESDP = true
+                await group.save()
+                logger.info("User " + user + " is using /esdp to change esdp status in group " + group.groupName)
+                const send = await bot.sendMessage(msg.chat.id, `ESDP для данной группы начато`)
+
+                setTimeout(() => {
+                    bot.deleteMessage(msg.chat.id, send.message_id.toString())
+                    bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                }, 10000)
+
+            } catch (err) {
+                logger.fatal("Something crashed in /esdp command, last user was " + user)
+                await bot.sendMessage(msg.chat.id, "Неверный ввод")
+            }
+        } else {
+            logger.info("User " + user + " is trying to use /esdp, but user is not admin")
+            const funnyResponse = `
+<b>ESDP менять</b>
+<b>Нельзя группы текущей </b>
+<b>Уже решено</b>
+        `
+            const send = await bot.sendMessage(msg.chat.id, funnyResponse, {
+                parse_mode: "HTML"
+            })
+            setTimeout(() => {
+                bot.deleteMessage(msg.chat.id, msg.message_id.toString())
+                bot.deleteMessage(msg.chat.id, send.message_id.toString())
+            }, 30000) // 30 секунд до удаления сообщения
+        }
+    } else {
+        logger.info("User " + user + " is trying to use /esdp, but bot is not admin")
         await bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")
     }
 })
@@ -528,41 +588,63 @@ bot.onText(/\/show/, async (msg) => {
         const group = await Group.findOne({chatId: msg.chat.id})
         logger.info("User " + user + " is using /show, to see info about group " + group.groupName)
         const examSaturday = getDateOfNextExam(group)
-
-        let text = `
+        let text = ''
+        if (group.isESDP) {
+            text = `
 <b>----------------------------</b>
 
 <b>Данные по вашей группе</b>
 
 <b>Имя группы</b><pre>${group.groupName}</pre> 
-<b>Следующая контрольная</b><pre>#${Math.floor(group.currentWeek / 4) + 1} будет ${examSaturday}</pre> 
 <b>Админ вашей группы</b><pre>${group.groupAdmin}</pre> 
+
 `
-        text += `<b>----------------------------</b>
+            text += `<b>----------------------------</b>
 <b>Занятия по </b>
 `
-        for (let i = 0; i < group.lessons.length; i++) {
-            text += Object.keys(group.lessons[i]).map(key => {
-                return `<pre>${weekDays[parseInt(key) - 1]} в ${group.lessons[i][key]}</pre> 
+            for (let i = 0; i < group.lessons.length; i++) {
+                text += Object.keys(group.lessons[i]).map(key => {
+                    return `<pre>${weekDays[parseInt(key) - 1]} в ${group.lessons[i][key]}</pre> 
 `
-            })
-        }
-        text += `<b>----------------------------</b>
+                })
+            }
+        } else {
+            text = `
+<b>----------------------------</b>
+
+<b>Данные по вашей группе</b>
+
+<b>Имя группы</b><pre>${group.groupName}</pre> 
+<b>Следующая контрольная</b><pre>#${Math.floor(group.currentWeek / 4) + 1} будет ${examSaturday}</pre>
+<b>Админ вашей группы</b><pre>${group.groupAdmin}</pre> 
+`
+            text += `<b>----------------------------</b>
+<b>Занятия по </b>
+`
+            for (let i = 0; i < group.lessons.length; i++) {
+                text += Object.keys(group.lessons[i]).map(key => {
+                    return `<pre>${weekDays[parseInt(key) - 1]} в ${group.lessons[i][key]}</pre> 
+`
+                })
+            }
+            text += `<b>----------------------------</b>
 <b>Вебинары по </b>
 `
-        for (let i = 0; i < group.webinars.length; i++) {
-            text += Object.keys(group.webinars[i]).map(key => {
-                return `<pre>${weekDays[parseInt(key) - 1]} в ${group.webinars[i][key]}</pre> 
+            for (let i = 0; i < group.webinars.length; i++) {
+                text += Object.keys(group.webinars[i]).map(key => {
+                    return `<pre>${weekDays[parseInt(key) - 1]} в ${group.webinars[i][key]}</pre> 
 `
-            })
-        }
-        text += `<b>----------------------------</b>
+                })
+            }
+            text += `<b>----------------------------</b>
 <b>Даты каникул</b>
 `
-        for (let i = 0; i < group.holidays.length; i++) {
-            text += `<pre>${group.holidays[i]}</pre> 
+            for (let i = 0; i < group.holidays.length; i++) {
+                text += `<pre>${group.holidays[i]}</pre> 
 `
+            }
         }
+
 
 
 
@@ -599,8 +681,30 @@ bot.onText(/\/allgroups/, async (msg) => {
             for (let i = 0; i < groups.length; i++) {
                 const group = groups[i]
                 const examSaturday = getDateOfNextExam(group)
+                let text = ''
+                if (group.isESDP) {
+                    text = `
+<b>----------------------------</b>
 
-                let text = `
+<b>Данные по вашей группе</b>
+
+<b>Имя группы</b><pre>${group.groupName}</pre> 
+<b>Админ вашей группы</b><pre>${group.groupAdmin}</pre> 
+`
+                    text += `<b>----------------------------</b>
+<b>Занятия по </b>
+`
+                    for (let j = 0; j < group.lessons.length; j++) {
+                        text += Object.keys(group.lessons[j]).map(key => {
+                            return `<pre>${weekDays[parseInt(key) - 1]} в ${group.lessons[j][key]}</pre> 
+`
+                        })
+                    }
+                    text += `
+<b>ID группы</b> <pre>${group._id}</pre>
+                `
+                } else {
+                    text = `
 <b>----------------------------</b>
 
 <b>Данные по вашей группе</b>
@@ -609,34 +713,36 @@ bot.onText(/\/allgroups/, async (msg) => {
 <b>Следующая контрольная</b><pre>#${Math.floor(group.currentWeek / 4) + 1} будет ${examSaturday}</pre> 
 <b>Админ вашей группы</b><pre>${group.groupAdmin}</pre> 
 `
-                text += `<b>----------------------------</b>
+                    text += `<b>----------------------------</b>
 <b>Занятия по </b>
 `
-                for (let j = 0; j < group.lessons.length; j++) {
-                    text += Object.keys(group.lessons[j]).map(key => {
-                        return `<pre>${weekDays[parseInt(key) - 1]} в ${group.lessons[j][key]}</pre> 
+                    for (let j = 0; j < group.lessons.length; j++) {
+                        text += Object.keys(group.lessons[j]).map(key => {
+                            return `<pre>${weekDays[parseInt(key) - 1]} в ${group.lessons[j][key]}</pre> 
 `
-                    })
-                }
-                text += `<b>----------------------------</b>
+                        })
+                    }
+                    text += `<b>----------------------------</b>
 <b>Вебинары по </b>
 `
-                for (let j = 0; j < group.webinars.length; j++) {
-                    text += Object.keys(group.webinars[j]).map(key => {
-                        return `<pre>${weekDays[parseInt(key) - 1]} в ${group.webinars[j][key]}</pre> 
+                    for (let j = 0; j < group.webinars.length; j++) {
+                        text += Object.keys(group.webinars[j]).map(key => {
+                            return `<pre>${weekDays[parseInt(key) - 1]} в ${group.webinars[j][key]}</pre> 
 `
-                    })
-                }
-                text += `<b>----------------------------</b>
+                        })
+                    }
+                    text += `<b>----------------------------</b>
 <b>Даты каникул</b>
 `
-                for (let j = 0; j < group.holidays.length; j++) {
-                    text += `<pre>${group.holidays[j]}</pre> 
+                    for (let j = 0; j < group.holidays.length; j++) {
+                        text += `<pre>${group.holidays[j]}</pre> 
 `
-                }
-                text += `
+                    }
+                    text += `
 <b>ID группы</b> <pre>${group._id}</pre>
                 `
+                }
+
                 const numbersDividers = `
 <b>----------------------------</b>
 <b>${i + 1}</b>
@@ -684,6 +790,7 @@ bot.onText(/\/delete_(.+)/, async (msg, arr: any) => {
                 logger.warn("User " + user + " delete group " + group.groupName)
                 await group.delete()
                 await bot.sendMessage(msg.chat.id, `Группа ${group.groupName} успешно удалена из базы`)
+                await relaunchSchedulers()
             } else {
                 logger.warn("User " + user + " is trying to delete group " + group.groupName + " but password is incorrect")
                 await bot.sendMessage(msg.chat.id, funnyResponse, {
@@ -958,6 +1065,7 @@ const buildLessonMessage = async (groups: Array<GroupInterface>, day: any) => {
 const buildWebinarMessage = async (groups: Array<GroupInterface>, day: any) => {
     logger.trace("WEBINAR: Start of Building Webinar Message function")
     for (let i = 0; i < groups.length; i++) {
+        if (groups[i].isESDP) continue;
         for (let j = 0; j < groups[i].webinars.length; j++) {
             logger.trace("WEBINAR: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
             const isExamToday = day === 6 && (groups[i].currentWeek + 1) % 4 === 0
@@ -980,6 +1088,7 @@ const buildWebinarMessage = async (groups: Array<GroupInterface>, day: any) => {
 const buildComingExamMessage = async (groups: Array<GroupInterface>, date: string) => {
     logger.trace("EXAM: Start of Building Upcoming Exam Message function")
     for (let i = 0; i < groups.length; i++) {
+        if (groups[i].isESDP) continue;
         logger.trace("EXAM: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
         if ((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive) {
             logger.trace("EXAM: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about upcoming exam number " + (groups[i].currentWeek + 1) / 4)
@@ -996,6 +1105,7 @@ const buildComingExamMessage = async (groups: Array<GroupInterface>, date: strin
 const buildTodayExamMessage = async (groups: Array<GroupInterface>) => {
     logger.trace("EXAM_TODAY: Start of Building Exam Message function")
     for (let i = 0; i < groups.length; i++) {
+        if (groups[i].isESDP) continue;
         logger.trace("EXAM_TODAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName)
         if ((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive) {
             logger.trace("EXAM_TODAY: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about today's exam number " + (groups[i].currentWeek + 1) / 4)

@@ -21,6 +21,10 @@ const GroupSchema = new Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    isESDP: {
+        type: Boolean,
+        default: false
     }
 })
 

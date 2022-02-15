@@ -390,7 +390,7 @@ bot.onText(/\/build_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0
                 user = userObj.user.username;
                 return [4 /*yield*/, isBotAdmin(msg)];
             case 2:
-                if (!_c.sent()) return [3 /*break*/, 15];
+                if (!_c.sent()) return [3 /*break*/, 16];
                 return [4 /*yield*/, bot.getChatAdministrators(msg.chat.id)];
             case 3:
                 admins = _c.sent();
@@ -400,10 +400,10 @@ bot.onText(/\/build_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0
                         admin = true;
                     }
                 }
-                if (!admin) return [3 /*break*/, 12];
+                if (!admin) return [3 /*break*/, 13];
                 _c.label = 4;
             case 4:
-                _c.trys.push([4, 9, , 11]);
+                _c.trys.push([4, 10, , 12]);
                 logger.info("User " + user + " is using /build_ command");
                 return [4 /*yield*/, group_model_1.Group.findOne({ chatId: msg.chat.id })];
             case 5:
@@ -449,40 +449,43 @@ bot.onText(/\/build_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Регистрация прошла успешно, ваше сообщение будет удалено автоматически через 20 секунд")];
             case 8:
                 send_1 = _c.sent();
+                return [4 /*yield*/, relaunchSchedulers()];
+            case 9:
+                _c.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, send_1.message_id.toString());
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
                 }, 20000);
-                return [3 /*break*/, 11];
-            case 9:
+                return [3 /*break*/, 12];
+            case 10:
                 err_1 = _c.sent();
                 logger.fatal("Something crashed in /build_ command, last user was " + user);
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Неверный ввод")];
-            case 10:
+            case 11:
                 _c.sent();
-                return [3 /*break*/, 11];
-            case 11: return [3 /*break*/, 14];
-            case 12:
+                return [3 /*break*/, 12];
+            case 12: return [3 /*break*/, 15];
+            case 13:
                 logger.info("User " + user + " is not admin, and is trying to use /build_ command");
                 funnyResponse = "\n<b>\u041A\u0430\u0442\u0430\u043D\u044B \u0437\u0432\u0443\u043A\u0438</b>\n<b>\u0421\u0430\u043C\u0443\u0440\u0430\u0439 \u043F\u0440\u043E\u043C\u0430\u0445\u043D\u0443\u043B\u0441\u044F</b>\n<b>\u0421\u044D\u043F\u043F\u0443\u043A\u0443 \u0432\u044B\u0445\u043E\u0434</b>\n        ";
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
-            case 13:
+            case 14:
                 send_2 = _c.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
                     bot.deleteMessage(msg.chat.id, send_2.message_id.toString());
                 }, 30000); // 30 секунд до удаления сообщения
-                _c.label = 14;
-            case 14: return [3 /*break*/, 17];
-            case 15:
+                _c.label = 15;
+            case 15: return [3 /*break*/, 18];
+            case 16:
                 logger.info("User " + user + " is trying to use /build, but bot is not admin");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Ничего я не создам, пока я не админ")];
-            case 16:
+            case 17:
                 _c.sent();
-                _c.label = 17;
-            case 17: return [2 /*return*/];
+                _c.label = 18;
+            case 18: return [2 /*return*/];
         }
     });
 }); });
@@ -499,7 +502,7 @@ bot.onText(/\/setweek_(.+)/, function (msg, arr) { return __awaiter(void 0, void
                 user = userObj.user.username;
                 return [4 /*yield*/, isBotAdmin(msg)];
             case 2:
-                if (!_a.sent()) return [3 /*break*/, 14];
+                if (!_a.sent()) return [3 /*break*/, 15];
                 return [4 /*yield*/, bot.getChatAdministrators(msg.chat.id)];
             case 3:
                 admins = _a.sent();
@@ -509,10 +512,10 @@ bot.onText(/\/setweek_(.+)/, function (msg, arr) { return __awaiter(void 0, void
                         admin = true;
                     }
                 }
-                if (!admin) return [3 /*break*/, 11];
+                if (!admin) return [3 /*break*/, 12];
                 _a.label = 4;
             case 4:
-                _a.trys.push([4, 8, , 10]);
+                _a.trys.push([4, 9, , 11]);
                 return [4 /*yield*/, group_model_1.Group.findOne({ chatId: msg.chat.id })];
             case 5:
                 group = _a.sent();
@@ -537,40 +540,43 @@ bot.onText(/\/setweek_(.+)/, function (msg, arr) { return __awaiter(void 0, void
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u041D\u043E\u043C\u0435\u0440 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u043D\u0435\u0434\u0435\u043B\u0438 \u0438\u0437\u043C\u0435\u043D\u0435\u043D \u043D\u0430 ".concat(arr[1], ", \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u0443\u0434\u0430\u043B\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 10 \u0441\u0435\u043A\u0443\u043D\u0434"))];
             case 7:
                 send_3 = _a.sent();
+                return [4 /*yield*/, relaunchSchedulers()];
+            case 8:
+                _a.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, send_3.message_id.toString());
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
                 }, 10000);
-                return [3 /*break*/, 10];
-            case 8:
+                return [3 /*break*/, 11];
+            case 9:
                 err_2 = _a.sent();
                 logger.fatal("Something crashed in /setweek command, last user was " + user);
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Неверный ввод")];
-            case 9:
+            case 10:
                 _a.sent();
-                return [3 /*break*/, 10];
-            case 10: return [3 /*break*/, 13];
-            case 11:
+                return [3 /*break*/, 11];
+            case 11: return [3 /*break*/, 14];
+            case 12:
                 logger.info("User " + user + " is trying to use /setweek, but user is not admin");
                 funnyResponse = "\n<b>\u041F\u0440\u0430\u0432\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435</b>\n<b>\u0421\u0451\u0433\u0443\u043D\u0430\u0442\u0443 \u0434\u0430\u043D\u043E \u043B\u0438\u0448\u044C</b>\n<b>\u0421\u0442\u0443\u043F\u0430\u0439 \u0447\u0435\u043B\u043E\u0432\u0435\u043A</b>\n        ";
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
-            case 12:
+            case 13:
                 send_4 = _a.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
                     bot.deleteMessage(msg.chat.id, send_4.message_id.toString());
                 }, 30000); // 30 секунд до удаления сообщения
-                _a.label = 13;
-            case 13: return [3 /*break*/, 16];
-            case 14:
+                _a.label = 14;
+            case 14: return [3 /*break*/, 17];
+            case 15:
                 logger.info("User " + user + " is trying to use /setweek, but bot is not admin");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")];
-            case 15:
+            case 16:
                 _a.sent();
-                _a.label = 16;
-            case 16: return [2 /*return*/];
+                _a.label = 17;
+            case 17: return [2 /*return*/];
         }
     });
 }); });
@@ -651,10 +657,93 @@ bot.onText(/\/setadmin_(.+)/, function (msg, arr) { return __awaiter(void 0, voi
     });
 }); });
 /**
+ * Меняем статус группы на то, что начался ESDP, чтобы сообщения не отображали данные о контрольных и прочей лишней информации
+ * Также пропускается проверка по контрольной и вебинарам, чтобы сообщения группе более не отправлялись
+ */
+bot.onText(/\/esdp_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
+    var userObj, user, admins, admin, i, group, ii, lessons, i, send_7, err_4, funnyResponse, send_8;
+    var _a;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
+            case 1:
+                userObj = _b.sent();
+                user = userObj.user.username;
+                return [4 /*yield*/, isBotAdmin(msg)];
+            case 2:
+                if (!_b.sent()) return [3 /*break*/, 14];
+                return [4 /*yield*/, bot.getChatAdministrators(msg.chat.id)];
+            case 3:
+                admins = _b.sent();
+                admin = false;
+                for (i = 0; i < admins.length; i++) {
+                    if (admins[i].user.id === msg.from.id) {
+                        admin = true;
+                    }
+                }
+                if (!admin) return [3 /*break*/, 11];
+                _b.label = 4;
+            case 4:
+                _b.trys.push([4, 8, , 10]);
+                return [4 /*yield*/, group_model_1.Group.findOne({ chatId: msg.chat.id })];
+            case 5:
+                group = _b.sent();
+                ii = arr[1].replace(/\s+/g, ' ').trim().split(" ");
+                lessons = ii[0].split('/');
+                for (i = 0; i < lessons.length; i++) {
+                    lessons[i] = (_a = {}, _a[lessons[i].split("-")[0]] = lessons[i].split("-")[1], _a);
+                }
+                group.lessons = lessons;
+                group.isESDP = true;
+                return [4 /*yield*/, group.save()];
+            case 6:
+                _b.sent();
+                logger.info("User " + user + " is using /esdp to change esdp status in group " + group.groupName);
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "ESDP \u0434\u043B\u044F \u0434\u0430\u043D\u043D\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u044B \u043D\u0430\u0447\u0430\u0442\u043E")];
+            case 7:
+                send_7 = _b.sent();
+                setTimeout(function () {
+                    bot.deleteMessage(msg.chat.id, send_7.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, msg.message_id.toString());
+                }, 10000);
+                return [3 /*break*/, 10];
+            case 8:
+                err_4 = _b.sent();
+                logger.fatal("Something crashed in /esdp command, last user was " + user);
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Неверный ввод")];
+            case 9:
+                _b.sent();
+                return [3 /*break*/, 10];
+            case 10: return [3 /*break*/, 13];
+            case 11:
+                logger.info("User " + user + " is trying to use /esdp, but user is not admin");
+                funnyResponse = "\n<b>ESDP \u043C\u0435\u043D\u044F\u0442\u044C</b>\n<b>\u041D\u0435\u043B\u044C\u0437\u044F \u0433\u0440\u0443\u043F\u043F\u044B \u0442\u0435\u043A\u0443\u0449\u0435\u0439 </b>\n<b>\u0423\u0436\u0435 \u0440\u0435\u0448\u0435\u043D\u043E</b>\n        ";
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
+                        parse_mode: "HTML"
+                    })];
+            case 12:
+                send_8 = _b.sent();
+                setTimeout(function () {
+                    bot.deleteMessage(msg.chat.id, msg.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, send_8.message_id.toString());
+                }, 30000); // 30 секунд до удаления сообщения
+                _b.label = 13;
+            case 13: return [3 /*break*/, 16];
+            case 14:
+                logger.info("User " + user + " is trying to use /esdp, but bot is not admin");
+                return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Ничего я не поменяю, пока я не админ")];
+            case 15:
+                _b.sent();
+                _b.label = 16;
+            case 16: return [2 /*return*/];
+        }
+    });
+}); });
+/**
  * Получение инструкций, команда скрыта, нужно писать ее через / без единой ошибки, если студенты получат к ней доступ, то могут сломать бота
  */
 bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, isPrivate, admins, admin, i, text, err_4, funnyResponse, send_7;
+    var userObj, user, isPrivate, admins, admin, i, text, err_5, funnyResponse, send_9;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -688,7 +777,7 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(vo
                 _a.sent();
                 return [3 /*break*/, 8];
             case 6:
-                err_4 = _a.sent();
+                err_5 = _a.sent();
                 logger.fatal("Something crashed in /givemetheinstructionsplease command, last user was " + user);
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")];
             case 7:
@@ -702,10 +791,10 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(vo
                         parse_mode: "HTML"
                     })];
             case 10:
-                send_7 = _a.sent();
+                send_9 = _a.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-                    bot.deleteMessage(msg.chat.id, send_7.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, send_9.message_id.toString());
                 }, 15000); // 15 секунд до удаления сообщения
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
@@ -729,7 +818,7 @@ bot.onText(/\/givemetheinstructionsplease/, function (msg) { return __awaiter(vo
  * Сообщение автоматически удаляется спустя некоторое время
  */
 bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, group_1, examSaturday, text, _loop_1, i, _loop_2, i, i, send_8, err_5;
+    var userObj, user, group_1, examSaturday, text, _loop_1, i, _loop_2, i, _loop_3, i, i, send_10, err_6;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -747,41 +836,56 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
                 group_1 = _a.sent();
                 logger.info("User " + user + " is using /show, to see info about group " + group_1.groupName);
                 examSaturday = getDateOfNextExam(group_1);
-                text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>".concat(group_1.groupName, "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#").concat(Math.floor(group_1.currentWeek / 4) + 1, " \u0431\u0443\u0434\u0435\u0442 ").concat(examSaturday, "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>").concat(group_1.groupAdmin, "</pre> \n");
-                text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
-                _loop_1 = function (i) {
-                    text += Object.keys(group_1.lessons[i]).map(function (key) {
-                        return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group_1.lessons[i][key], "</pre> \n");
-                    });
-                };
-                for (i = 0; i < group_1.lessons.length; i++) {
-                    _loop_1(i);
+                text = '';
+                if (group_1.isESDP) {
+                    text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>".concat(group_1.groupName, "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>").concat(group_1.groupAdmin, "</pre> \n\n");
+                    text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
+                    _loop_1 = function (i) {
+                        text += Object.keys(group_1.lessons[i]).map(function (key) {
+                            return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group_1.lessons[i][key], "</pre> \n");
+                        });
+                    };
+                    for (i = 0; i < group_1.lessons.length; i++) {
+                        _loop_1(i);
+                    }
                 }
-                text += "<b>----------------------------</b>\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b>\n";
-                _loop_2 = function (i) {
-                    text += Object.keys(group_1.webinars[i]).map(function (key) {
-                        return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group_1.webinars[i][key], "</pre> \n");
-                    });
-                };
-                for (i = 0; i < group_1.webinars.length; i++) {
-                    _loop_2(i);
-                }
-                text += "<b>----------------------------</b>\n<b>\u0414\u0430\u0442\u044B \u043A\u0430\u043D\u0438\u043A\u0443\u043B</b>\n";
-                for (i = 0; i < group_1.holidays.length; i++) {
-                    text += "<pre>".concat(group_1.holidays[i], "</pre> \n");
+                else {
+                    text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>".concat(group_1.groupName, "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#").concat(Math.floor(group_1.currentWeek / 4) + 1, " \u0431\u0443\u0434\u0435\u0442 ").concat(examSaturday, "</pre>\n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>").concat(group_1.groupAdmin, "</pre> \n");
+                    text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
+                    _loop_2 = function (i) {
+                        text += Object.keys(group_1.lessons[i]).map(function (key) {
+                            return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group_1.lessons[i][key], "</pre> \n");
+                        });
+                    };
+                    for (i = 0; i < group_1.lessons.length; i++) {
+                        _loop_2(i);
+                    }
+                    text += "<b>----------------------------</b>\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b>\n";
+                    _loop_3 = function (i) {
+                        text += Object.keys(group_1.webinars[i]).map(function (key) {
+                            return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group_1.webinars[i][key], "</pre> \n");
+                        });
+                    };
+                    for (i = 0; i < group_1.webinars.length; i++) {
+                        _loop_3(i);
+                    }
+                    text += "<b>----------------------------</b>\n<b>\u0414\u0430\u0442\u044B \u043A\u0430\u043D\u0438\u043A\u0443\u043B</b>\n";
+                    for (i = 0; i < group_1.holidays.length; i++) {
+                        text += "<pre>".concat(group_1.holidays[i], "</pre> \n");
+                    }
                 }
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, text, {
                         parse_mode: "HTML"
                     })];
             case 5:
-                send_8 = _a.sent();
+                send_10 = _a.sent();
                 setTimeout(function () {
                     bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-                    bot.deleteMessage(msg.chat.id, send_8.message_id.toString());
+                    bot.deleteMessage(msg.chat.id, send_10.message_id.toString());
                 }, 30000); // 30 секунд до удаления сообщения
                 return [3 /*break*/, 8];
             case 6:
-                err_5 = _a.sent();
+                err_6 = _a.sent();
                 logger.info("User " + user + " is trying to use /show, but group doesn't exist");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Группа еще не создана")];
             case 7:
@@ -804,7 +908,7 @@ bot.onText(/\/show/, function (msg) { return __awaiter(void 0, void 0, void 0, f
  * Подсказки данной команды нет, нужно вводить самому без ошибок, иначе не сработает
  */
 bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, isPrivate, groups, _loop_3, i, err_6;
+    var userObj, user, isPrivate, groups, _loop_4, i, err_7;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -820,37 +924,53 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
                 return [4 /*yield*/, group_model_1.Group.find()];
             case 3:
                 groups = _a.sent();
-                _loop_3 = function (i) {
-                    var group, examSaturday, text, _loop_4, j, _loop_5, j, j, numbersDividers;
+                _loop_4 = function (i) {
+                    var group, examSaturday, text, _loop_5, j, _loop_6, j, _loop_7, j, j, numbersDividers;
                     return __generator(this, function (_b) {
                         switch (_b.label) {
                             case 0:
                                 group = groups[i];
                                 examSaturday = getDateOfNextExam(group);
-                                text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>".concat(group.groupName, "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#").concat(Math.floor(group.currentWeek / 4) + 1, " \u0431\u0443\u0434\u0435\u0442 ").concat(examSaturday, "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>").concat(group.groupAdmin, "</pre> \n");
-                                text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
-                                _loop_4 = function (j) {
-                                    text += Object.keys(group.lessons[j]).map(function (key) {
-                                        return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group.lessons[j][key], "</pre> \n");
-                                    });
-                                };
-                                for (j = 0; j < group.lessons.length; j++) {
-                                    _loop_4(j);
+                                text = '';
+                                if (group.isESDP) {
+                                    text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>".concat(group.groupName, "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>").concat(group.groupAdmin, "</pre> \n");
+                                    text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
+                                    _loop_5 = function (j) {
+                                        text += Object.keys(group.lessons[j]).map(function (key) {
+                                            return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group.lessons[j][key], "</pre> \n");
+                                        });
+                                    };
+                                    for (j = 0; j < group.lessons.length; j++) {
+                                        _loop_5(j);
+                                    }
+                                    text += "\n<b>ID \u0433\u0440\u0443\u043F\u043F\u044B</b> <pre>".concat(group._id, "</pre>\n                ");
                                 }
-                                text += "<b>----------------------------</b>\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b>\n";
-                                _loop_5 = function (j) {
-                                    text += Object.keys(group.webinars[j]).map(function (key) {
-                                        return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group.webinars[j][key], "</pre> \n");
-                                    });
-                                };
-                                for (j = 0; j < group.webinars.length; j++) {
-                                    _loop_5(j);
+                                else {
+                                    text = "\n<b>----------------------------</b>\n\n<b>\u0414\u0430\u043D\u043D\u044B\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u0435</b>\n\n<b>\u0418\u043C\u044F \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>".concat(group.groupName, "</pre> \n<b>\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F</b><pre>#").concat(Math.floor(group.currentWeek / 4) + 1, " \u0431\u0443\u0434\u0435\u0442 ").concat(examSaturday, "</pre> \n<b>\u0410\u0434\u043C\u0438\u043D \u0432\u0430\u0448\u0435\u0439 \u0433\u0440\u0443\u043F\u043F\u044B</b><pre>").concat(group.groupAdmin, "</pre> \n");
+                                    text += "<b>----------------------------</b>\n<b>\u0417\u0430\u043D\u044F\u0442\u0438\u044F \u043F\u043E </b>\n";
+                                    _loop_6 = function (j) {
+                                        text += Object.keys(group.lessons[j]).map(function (key) {
+                                            return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group.lessons[j][key], "</pre> \n");
+                                        });
+                                    };
+                                    for (j = 0; j < group.lessons.length; j++) {
+                                        _loop_6(j);
+                                    }
+                                    text += "<b>----------------------------</b>\n<b>\u0412\u0435\u0431\u0438\u043D\u0430\u0440\u044B \u043F\u043E </b>\n";
+                                    _loop_7 = function (j) {
+                                        text += Object.keys(group.webinars[j]).map(function (key) {
+                                            return "<pre>".concat(weekDays[parseInt(key) - 1], " \u0432 ").concat(group.webinars[j][key], "</pre> \n");
+                                        });
+                                    };
+                                    for (j = 0; j < group.webinars.length; j++) {
+                                        _loop_7(j);
+                                    }
+                                    text += "<b>----------------------------</b>\n<b>\u0414\u0430\u0442\u044B \u043A\u0430\u043D\u0438\u043A\u0443\u043B</b>\n";
+                                    for (j = 0; j < group.holidays.length; j++) {
+                                        text += "<pre>".concat(group.holidays[j], "</pre> \n");
+                                    }
+                                    text += "\n<b>ID \u0433\u0440\u0443\u043F\u043F\u044B</b> <pre>".concat(group._id, "</pre>\n                ");
                                 }
-                                text += "<b>----------------------------</b>\n<b>\u0414\u0430\u0442\u044B \u043A\u0430\u043D\u0438\u043A\u0443\u043B</b>\n";
-                                for (j = 0; j < group.holidays.length; j++) {
-                                    text += "<pre>".concat(group.holidays[j], "</pre> \n");
-                                }
-                                text += "\n<b>ID \u0433\u0440\u0443\u043F\u043F\u044B</b> <pre>".concat(group._id, "</pre>\n                ");
                                 numbersDividers = "\n<b>----------------------------</b>\n<b>".concat(i + 1, "</b>\n<b>----------------------------</b>\n                ");
                                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, numbersDividers, {
                                         parse_mode: "HTML"
@@ -870,7 +990,7 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
                 _a.label = 4;
             case 4:
                 if (!(i < groups.length)) return [3 /*break*/, 7];
-                return [5 /*yield**/, _loop_3(i)];
+                return [5 /*yield**/, _loop_4(i)];
             case 5:
                 _a.sent();
                 _a.label = 6;
@@ -879,7 +999,7 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
                 return [3 /*break*/, 4];
             case 7: return [3 /*break*/, 10];
             case 8:
-                err_6 = _a.sent();
+                err_7 = _a.sent();
                 logger.fatal("User " + user + " tried /allgroups and bot crashed");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Что то рухнуло и сломалось")];
             case 9:
@@ -904,7 +1024,7 @@ bot.onText(/\/allgroups/, function (msg) { return __awaiter(void 0, void 0, void
  * Пароль пока не придумал где хранить, пусть это будет ****** (но скорее всего его поменяют в будущем)))
  */
 bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, funnyResponse, ii, group, err_7;
+    var userObj, user, funnyResponse, ii, group, err_8;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -914,12 +1034,12 @@ bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 
                 funnyResponse = "\n<b>\u0413\u0440\u0443\u043F\u043F\u0443 \u0443\u0434\u0430\u043B\u0438\u0442\u044C</b>\n<b>\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0443\u0441\u0442\u043E\u0442\u0443 \u043D\u0430\u043C</b>\n<b>\u0412\u0430\u043C \u043C\u0430\u043B\u043E \u0447\u0435\u0441\u0442\u0438</b>\n        ";
                 _a.label = 2;
             case 2:
-                _a.trys.push([2, 9, , 11]);
+                _a.trys.push([2, 10, , 12]);
                 ii = arr[1].replace(/\s+/g, ' ').trim().split(" ");
                 return [4 /*yield*/, group_model_1.Group.findOne({ _id: ii[0] })];
             case 3:
                 group = _a.sent();
-                if (!(ii[1] === config_1.config.password)) return [3 /*break*/, 6];
+                if (!(ii[1] === config_1.config.password)) return [3 /*break*/, 7];
                 logger.warn("User " + user + " delete group " + group.groupName);
                 return [4 /*yield*/, group.delete()];
             case 4:
@@ -927,26 +1047,29 @@ bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "\u0413\u0440\u0443\u043F\u043F\u0430 ".concat(group.groupName, " \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0443\u0434\u0430\u043B\u0435\u043D\u0430 \u0438\u0437 \u0431\u0430\u0437\u044B"))];
             case 5:
                 _a.sent();
-                return [3 /*break*/, 8];
+                return [4 /*yield*/, relaunchSchedulers()];
             case 6:
+                _a.sent();
+                return [3 /*break*/, 9];
+            case 7:
                 logger.warn("User " + user + " is trying to delete group " + group.groupName + " but password is incorrect");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
-            case 7:
+            case 8:
                 _a.sent();
-                _a.label = 8;
-            case 8: return [3 /*break*/, 11];
-            case 9:
-                err_7 = _a.sent();
+                _a.label = 9;
+            case 9: return [3 /*break*/, 12];
+            case 10:
+                err_8 = _a.sent();
                 logger.fatal("User " + user + " used command /delete and bot crashed because not all parameters of command were present");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, funnyResponse, {
                         parse_mode: "HTML"
                     })];
-            case 10:
+            case 11:
                 _a.sent();
-                return [3 /*break*/, 11];
-            case 11: return [2 /*return*/];
+                return [3 /*break*/, 12];
+            case 12: return [2 /*return*/];
         }
     });
 }); });
@@ -958,7 +1081,7 @@ bot.onText(/\/delete_(.+)/, function (msg, arr) { return __awaiter(void 0, void 
  * Первый шифр, азбука Морзе, отправляется аудиофайлом. Зашифрованная команда gotonext
  */
 bot.onText(/\/letsplay/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var isPrivate, userObj, user, text, err_8, send_9, e_1;
+    var isPrivate, userObj, user, text, err_9, send_11, e_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -981,7 +1104,7 @@ bot.onText(/\/letsplay/, function (msg) { return __awaiter(void 0, void 0, void 
                 _a.sent();
                 return [3 /*break*/, 6];
             case 4:
-                err_8 = _a.sent();
+                err_9 = _a.sent();
                 logger.fatal("User " + user + " crashed bot with /letsplay command");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением")];
             case 5:
@@ -993,10 +1116,10 @@ bot.onText(/\/letsplay/, function (msg) { return __awaiter(void 0, void 0, void 
                 logger.info("User " + user + " tries to play /letsplay but bot is in public chat");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Я бы с радостью показал и затем удалил квестовое сообщение, но студенты говорят, что я спамю, так что пишите мне эту команду лично")];
             case 8:
-                send_9 = _a.sent();
+                send_11 = _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
                         bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-                        bot.deleteMessage(msg.chat.id, send_9.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_11.message_id.toString());
                     }, 15000)];
             case 9:
                 _a.sent();
@@ -1014,7 +1137,7 @@ bot.onText(/\/letsplay/, function (msg) { return __awaiter(void 0, void 0, void 
  *  чтобы никто не скопировал то, что смог найти другой. Шифр имеет отступ +7 символов, ведет к команде stepthree
  */
 bot.onText(/\/gotonext/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, isPrivate, send_10, err_9;
+    var userObj, user, isPrivate, send_12, err_10;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -1037,12 +1160,12 @@ bot.onText(/\/gotonext/, function (msg) { return __awaiter(void 0, void 0, void 
                 logger.silly("User " + user + " wrote /gotonext in group chat");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Напиши мне эту команду лично, я не могу при всех")];
             case 6:
-                send_10 = _a.sent();
+                send_12 = _a.sent();
                 return [4 /*yield*/, bot.deleteMessage(msg.chat.id, msg.message_id.toString())];
             case 7:
                 _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
-                        bot.deleteMessage(msg.chat.id, send_10.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_12.message_id.toString());
                     }, 7000)];
             case 8:
                 _a.sent();
@@ -1055,7 +1178,7 @@ bot.onText(/\/gotonext/, function (msg) { return __awaiter(void 0, void 0, void 
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
             case 12:
-                err_9 = _a.sent();
+                err_10 = _a.sent();
                 logger.fatal("User " + user + " crashed bot with /gotonext command");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 13:
@@ -1070,7 +1193,7 @@ bot.onText(/\/gotonext/, function (msg) { return __awaiter(void 0, void 0, void 
  *  Код ведет к команде website (исходное предложение you are on the right way my friend now write me the command website)
  */
 bot.onText(/\/stepthree/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, isPrivate, send_11, err_10;
+    var userObj, user, isPrivate, send_13, err_11;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -1093,12 +1216,12 @@ bot.onText(/\/stepthree/, function (msg) { return __awaiter(void 0, void 0, void
                 logger.silly("User " + user + " wrote /stepthree in group chat");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Если второй шаг был в личной переписке, почему третий должен быть в общем чате?")];
             case 6:
-                send_11 = _a.sent();
+                send_13 = _a.sent();
                 return [4 /*yield*/, bot.deleteMessage(msg.chat.id, msg.message_id.toString())];
             case 7:
                 _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
-                        bot.deleteMessage(msg.chat.id, send_11.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_13.message_id.toString());
                     }, 7000)];
             case 8:
                 _a.sent();
@@ -1111,7 +1234,7 @@ bot.onText(/\/stepthree/, function (msg) { return __awaiter(void 0, void 0, void
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
             case 12:
-                err_10 = _a.sent();
+                err_11 = _a.sent();
                 logger.fatal("User " + user + " crashed bot with /stepthree command");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 13:
@@ -1132,7 +1255,7 @@ bot.onText(/\/stepthree/, function (msg) { return __awaiter(void 0, void 0, void
  * Итоговая команда /243256
  */
 bot.onText(/\/website/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, isPrivate, send_12, err_11;
+    var userObj, user, isPrivate, send_14, err_12;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -1155,12 +1278,12 @@ bot.onText(/\/website/, function (msg) { return __awaiter(void 0, void 0, void 0
                 logger.silly("User " + user + " wrote /website in group chat");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Вы издеваетесь))?")];
             case 6:
-                send_12 = _a.sent();
+                send_14 = _a.sent();
                 return [4 /*yield*/, bot.deleteMessage(msg.chat.id, msg.message_id.toString())];
             case 7:
                 _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
-                        bot.deleteMessage(msg.chat.id, send_12.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_14.message_id.toString());
                     }, 7000)];
             case 8:
                 _a.sent();
@@ -1173,7 +1296,7 @@ bot.onText(/\/website/, function (msg) { return __awaiter(void 0, void 0, void 0
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
             case 12:
-                err_11 = _a.sent();
+                err_12 = _a.sent();
                 logger.fatal("User " + user + " crashed bot with /website command");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 13:
@@ -1193,7 +1316,7 @@ bot.onText(/\/website/, function (msg) { return __awaiter(void 0, void 0, void 0
  *  команда итоговая iamthechampion
  */
 bot.onText(/\/243256/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, isPrivate, text, send_13, err_12;
+    var userObj, user, isPrivate, text, send_15, err_13;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -1220,12 +1343,12 @@ bot.onText(/\/243256/, function (msg) { return __awaiter(void 0, void 0, void 0,
                 logger.silly("User " + user + " wrote /243256 in group chat");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Вы далеко зашли, и вами движет любопытство, что же ответит бот в общем чате на этот раз. А отвечу я 'notredame'")];
             case 6:
-                send_13 = _a.sent();
+                send_15 = _a.sent();
                 return [4 /*yield*/, bot.deleteMessage(msg.chat.id, msg.message_id.toString())];
             case 7:
                 _a.sent();
                 return [4 /*yield*/, setTimeout(function () {
-                        bot.deleteMessage(msg.chat.id, send_13.message_id.toString());
+                        bot.deleteMessage(msg.chat.id, send_15.message_id.toString());
                     }, 7000)];
             case 8:
                 _a.sent();
@@ -1238,7 +1361,7 @@ bot.onText(/\/243256/, function (msg) { return __awaiter(void 0, void 0, void 0,
                 _a.label = 11;
             case 11: return [3 /*break*/, 14];
             case 12:
-                err_12 = _a.sent();
+                err_13 = _a.sent();
                 logger.fatal("User " + user + " crashed bot with /243256 command");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 13:
@@ -1253,7 +1376,7 @@ bot.onText(/\/243256/, function (msg) { return __awaiter(void 0, void 0, void 0,
  *  о своей победе))) Подумать о призах, может скидку тому, кто первый решит?
  */
 bot.onText(/\/iamthechampion/, function (msg) { return __awaiter(void 0, void 0, void 0, function () {
-    var userObj, user, isPrivate, text, textWinnerToGroup, err_13;
+    var userObj, user, isPrivate, text, textWinnerToGroup, err_14;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, bot.getChatMember(msg.chat.id, msg.from.id.toString())];
@@ -1296,7 +1419,7 @@ bot.onText(/\/iamthechampion/, function (msg) { return __awaiter(void 0, void 0,
                 _a.label = 10;
             case 10: return [3 /*break*/, 13];
             case 11:
-                err_13 = _a.sent();
+                err_14 = _a.sent();
                 logger.fatal("User " + user + " crashed bot with /iamthechampion command");
                 return [4 /*yield*/, bot.sendMessage(msg.chat.id, "Похоже что-то случилось с соединением, или вы звбыли сделать бота админом в групповом чате, или у вас руки кривые))) сообщите саппорту о проблеме")];
             case 12:
@@ -1358,6 +1481,8 @@ var buildWebinarMessage = function (groups, day) { return __awaiter(void 0, void
                 _a.label = 1;
             case 1:
                 if (!(i < groups.length)) return [3 /*break*/, 6];
+                if (groups[i].isESDP)
+                    return [3 /*break*/, 5];
                 j = 0;
                 _a.label = 2;
             case 2:
@@ -1398,6 +1523,8 @@ var buildComingExamMessage = function (groups, date) { return __awaiter(void 0, 
                 _a.label = 1;
             case 1:
                 if (!(i < groups.length)) return [3 /*break*/, 4];
+                if (groups[i].isESDP)
+                    return [3 /*break*/, 3];
                 logger.trace("EXAM: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
                 if (!((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive)) return [3 /*break*/, 3];
                 logger.trace("EXAM: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about upcoming exam number " + (groups[i].currentWeek + 1) / 4);
@@ -1427,6 +1554,8 @@ var buildTodayExamMessage = function (groups) { return __awaiter(void 0, void 0,
                 _a.label = 1;
             case 1:
                 if (!(i < groups.length)) return [3 /*break*/, 4];
+                if (groups[i].isESDP)
+                    return [3 /*break*/, 3];
                 logger.trace("EXAM_TODAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
                 if (!((groups[i].currentWeek + 1) % 4 === 0 && groups[i].isActive)) return [3 /*break*/, 3];
                 logger.trace("EXAM_TODAY: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about today's exam number " + (groups[i].currentWeek + 1) / 4);
@@ -1659,7 +1788,7 @@ var isBotAdmin = function (msg) { return __awaiter(void 0, void 0, void 0, funct
  * Возможны ошибки, тестировал буквально один день, есть вероятность, что где-то что-то упустил.
  */
 var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var adm, groups, _loop_6, i;
+    var adm, groups, _loop_8, i;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -1670,8 +1799,8 @@ var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, voi
                 return [4 /*yield*/, group_model_1.Group.find()];
             case 2:
                 groups = _a.sent();
-                _loop_6 = function (i) {
-                    var _loop_7 = function (j) {
+                _loop_8 = function (i) {
+                    var _loop_9 = function (j) {
                         logger.info("Building started for message week and time (week) ".concat(adm[i].weeksAndTime[j].week, " - (min) ").concat(adm[i].weeksAndTime[j].time.minutes, " - (hours) ").concat(adm[i].weeksAndTime[j].time.hour, " (day of week) ").concat(adm[i].weeksAndTime[j].time.day));
                         node_schedule_1.default.scheduleJob("0 ".concat(adm[i].weeksAndTime[j].time.minutes, " ").concat(adm[i].weeksAndTime[j].time.hour, " * * ").concat(adm[i].weeksAndTime[j].time.day), function () { return __awaiter(void 0, void 0, void 0, function () {
                             return __generator(this, function (_a) {
@@ -1685,11 +1814,11 @@ var buildSchedulersForAdminMessages = function () { return __awaiter(void 0, voi
                         }); });
                     };
                     for (var j = 0; j < adm[i].weeksAndTime.length; j++) {
-                        _loop_7(j);
+                        _loop_9(j);
                     }
                 };
                 for (i = 0; i < adm.length; i++) {
-                    _loop_6(i);
+                    _loop_8(i);
                 }
                 return [2 /*return*/];
         }

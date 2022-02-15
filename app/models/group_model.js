@@ -21,6 +21,10 @@ var GroupSchema = new Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    isESDP: {
+        type: Boolean,
+        default: false
     }
 });
 exports.Group = mongoose_1.default.model('groups', GroupSchema);
