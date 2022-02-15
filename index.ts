@@ -1054,7 +1054,13 @@ const buildLessonMessage = async (groups: Array<GroupInterface>, day: any) => {
             if (checkKeyAndGetTime && groups[i].isActive) {
                 const lessonNum = (groups[i].currentWeek) * groups[i].lessons.length + j + 1
                 logger.trace("LESSON: Groups in cycle, group " + (i+1) + " " + groups[i].groupName + " got the message about lesson today, lesson number is " + lessonNum)
-                await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, сегодня (${moment().format("DD-MM-YYYY")}) у вас состоится занятие номер #${lessonNum} в ${checkKeyAndGetTime}, читайте раздатку перед занятием`, {
+                groups[i].isESDP
+                    ?
+                    await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, сегодня (${moment().format("DD-MM-YYYY")}) у вас состоится ESDP занятие`, {
+                        parse_mode: "HTML"
+                    })
+                    :
+                    await bot.sendMessage(groups[i].chatId, `Внимание #напоминаем, сегодня (${moment().format("DD-MM-YYYY")}) у вас состоится занятие номер #${lessonNum} в ${checkKeyAndGetTime}, читайте раздатку перед занятием`, {
                     parse_mode: "HTML"
                 })
             }

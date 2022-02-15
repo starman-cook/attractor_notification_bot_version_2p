@@ -1434,40 +1434,50 @@ bot.onText(/\/iamthechampion/, function (msg) { return __awaiter(void 0, void 0,
  * Функции для составления необходимых сообщений
  */
 var buildLessonMessage = function (groups, day) { return __awaiter(void 0, void 0, void 0, function () {
-    var i, j, isExamToday, checkKeyAndGetTime, lessonNum;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
+    var i, j, isExamToday, checkKeyAndGetTime, lessonNum, _a;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
             case 0:
                 logger.trace("LESSON: Start of Building Lesson Message function");
                 i = 0;
-                _a.label = 1;
+                _b.label = 1;
             case 1:
-                if (!(i < groups.length)) return [3 /*break*/, 6];
+                if (!(i < groups.length)) return [3 /*break*/, 9];
                 j = 0;
-                _a.label = 2;
+                _b.label = 2;
             case 2:
-                if (!(j < groups[i].lessons.length)) return [3 /*break*/, 5];
+                if (!(j < groups[i].lessons.length)) return [3 /*break*/, 8];
                 logger.trace("LESSON: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName);
                 isExamToday = day === 6 && (groups[i].currentWeek + 1) % 4 === 0;
                 if (isExamToday)
-                    return [3 /*break*/, 4];
+                    return [3 /*break*/, 7];
                 checkKeyAndGetTime = groups[i].lessons[j][day];
-                if (!(checkKeyAndGetTime && groups[i].isActive)) return [3 /*break*/, 4];
+                if (!(checkKeyAndGetTime && groups[i].isActive)) return [3 /*break*/, 7];
                 lessonNum = (groups[i].currentWeek) * groups[i].lessons.length + j + 1;
                 logger.trace("LESSON: Groups in cycle, group " + (i + 1) + " " + groups[i].groupName + " got the message about lesson today, lesson number is " + lessonNum);
-                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (".concat((0, moment_1.default)().format("DD-MM-YYYY"), ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u043D\u043E\u043C\u0435\u0440 #").concat(lessonNum, " \u0432 ").concat(checkKeyAndGetTime, ", \u0447\u0438\u0442\u0430\u0439\u0442\u0435 \u0440\u0430\u0437\u0434\u0430\u0442\u043A\u0443 \u043F\u0435\u0440\u0435\u0434 \u0437\u0430\u043D\u044F\u0442\u0438\u0435\u043C"), {
+                if (!groups[i].isESDP) return [3 /*break*/, 4];
+                return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (".concat((0, moment_1.default)().format("DD-MM-YYYY"), ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F ESDP \u0437\u0430\u043D\u044F\u0442\u0438\u0435"), {
                         parse_mode: "HTML"
                     })];
             case 3:
-                _a.sent();
-                _a.label = 4;
-            case 4:
+                _a = _b.sent();
+                return [3 /*break*/, 6];
+            case 4: return [4 /*yield*/, bot.sendMessage(groups[i].chatId, "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435 #\u043D\u0430\u043F\u043E\u043C\u0438\u043D\u0430\u0435\u043C, \u0441\u0435\u0433\u043E\u0434\u043D\u044F (".concat((0, moment_1.default)().format("DD-MM-YYYY"), ") \u0443 \u0432\u0430\u0441 \u0441\u043E\u0441\u0442\u043E\u0438\u0442\u0441\u044F \u0437\u0430\u043D\u044F\u0442\u0438\u0435 \u043D\u043E\u043C\u0435\u0440 #").concat(lessonNum, " \u0432 ").concat(checkKeyAndGetTime, ", \u0447\u0438\u0442\u0430\u0439\u0442\u0435 \u0440\u0430\u0437\u0434\u0430\u0442\u043A\u0443 \u043F\u0435\u0440\u0435\u0434 \u0437\u0430\u043D\u044F\u0442\u0438\u0435\u043C"), {
+                    parse_mode: "HTML"
+                })];
+            case 5:
+                _a = _b.sent();
+                _b.label = 6;
+            case 6:
+                _a;
+                _b.label = 7;
+            case 7:
                 j++;
                 return [3 /*break*/, 2];
-            case 5:
+            case 8:
                 i++;
                 return [3 /*break*/, 1];
-            case 6: return [2 /*return*/];
+            case 9: return [2 /*return*/];
         }
     });
 }); };
